@@ -1,548 +1,1091 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Centro de Mando Integral — IA</title>
-<style>
-  :root{
-    --bg:#070c10;
-    --panel:#0c151c;
-    --panel-border:rgba(56,214,140,0.18);
-    --panel-border-strong:rgba(56,214,140,0.35);
-    --green:#3ee08a;
-    --green-dim:#1c8f5a;
-    --green-glow:rgba(62,224,138,0.35);
-    --text:#e7f2ec;
-    --text-dim:#8fa39a;
-    --text-faint:#5d6e67;
-    --red:#ef6a6a;
-    --amber:#e8c15a;
-    --blue:#5aa7e8;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{
-    font-family:'Segoe UI',Roboto,Arial,sans-serif;
-    background:radial-gradient(circle at 20% 0%, #0d1b18 0%, var(--bg) 55%);
-    color:var(--text);
-    padding:18px;
-  }
-  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
-  .shell{
-    position:relative;
-    display:grid;
-    grid-template-columns:200px 1fr 230px;
-    gap:12px;
-    max-width:1600px;
-    margin:0 auto;
-  }
-  .panel{
-    background:linear-gradient(180deg, rgba(18,32,28,0.9), rgba(9,16,14,0.9));
-    border:1px solid var(--panel-border);
-    border-radius:10px;
-    padding:14px 16px;
-  }
-  .panel-title{
-    display:flex;align-items:center;gap:8px;
-    font-size:13px;font-weight:600;letter-spacing:.4px;
-    color:var(--text);text-transform:uppercase;
-    margin-bottom:12px;
-  }
-  .panel-title .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green-glow);}
-  .eyebrow{font-size:10px;color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;}
-  .metric-val{font-size:20px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
-  .metric-delta{font-size:11px;font-weight:600;}
-  .up{color:var(--green);}
-  .down{color:var(--red);}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Mando Integral | Business Intelligence Dashboard</title>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #060b11;
+            --panel-bg: rgba(13, 23, 36, 0.75);
+            --panel-border: rgba(0, 229, 255, 0.18);
+            --panel-glow: rgba(0, 229, 255, 0.05);
+            --accent-cyan: #00f2fe;
+            --accent-green: #00e676;
+            --accent-yellow: #ffb300;
+            --accent-red: #ff5252;
+            --text-main: #e2e8f0;
+            --text-muted: #8899a6;
+            --card-radius: 12px;
+        }
 
-  /* LOGO / NAV */
-  .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
-  .logo-mark{
-    width:34px;height:34px;border-radius:50%;
-    border:1.5px solid var(--green);
-    display:flex;align-items:center;justify-content:center;
-    font-weight:700;font-size:13px;color:var(--green);
-    box-shadow:0 0 10px var(--green-glow) inset;
-  }
-  .brand-name{font-size:13px;font-weight:700;}
-  .brand-sub{font-size:9px;color:var(--text-dim);letter-spacing:1px;}
-  nav.navlist{margin-top:14px;display:flex;flex-direction:column;gap:2px;}
-  .navitem{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:8px 6px;border-radius:6px;font-size:12px;color:var(--text-dim);
-    cursor:pointer;
-  }
-  .navitem.active{background:rgba(62,224,138,0.08);color:var(--text);border:1px solid var(--panel-border);}
-  .navitem:hover{color:var(--text);}
-  .toggle{width:26px;height:14px;border-radius:8px;background:rgba(255,255,255,0.06);position:relative;flex-shrink:0;}
-  .toggle.on{background:rgba(62,224,138,0.25);}
-  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--text-faint);}
-  .toggle.on::after{left:14px;background:var(--green);box-shadow:0 0 4px var(--green-glow);}
-  .toggle.off::after{background:var(--text-faint);}
-  .mini-weather{margin-top:16px;padding-top:14px;border-top:1px solid var(--panel-border);}
-  .city{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
-  .temp{font-size:22px;font-weight:700;}
-  .sync{margin-top:14px;padding-top:14px;border-top:1px solid var(--panel-border);font-size:10px;color:var(--text-dim);}
-  .sync .live{color:var(--green);font-weight:600;}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
 
-  /* HEADER */
-  .header{
-    display:flex;align-items:center;justify-content:space-between;
-    background:linear-gradient(180deg, rgba(18,32,28,0.9), rgba(9,16,14,0.9));
-    border:1px solid var(--panel-border);border-radius:10px;
-    padding:14px 20px;margin-bottom:12px;flex-wrap:wrap;gap:10px;
-  }
-  .header h1{font-size:17px;font-weight:700;letter-spacing:.3px;}
-  .status-pill{
-    display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);
-    background:rgba(255,255,255,0.03);border:1px solid var(--panel-border);
-    padding:5px 10px;border-radius:20px;
-  }
-  .clock{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
-  .datebadge{font-size:11px;color:var(--text-dim);border:1px solid var(--panel-border);padding:5px 10px;border-radius:6px;}
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(0, 242, 254, 0.04) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(0, 230, 118, 0.04) 0%, transparent 40%),
+                linear-gradient(180deg, #04080e 0%, #08111a 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-  /* KPI ROW */
-  .kpi-row{
-    display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:12px;
-  }
-  .kpi-card{
-    background:linear-gradient(180deg, rgba(18,32,28,0.9), rgba(9,16,14,0.9));
-    border:1px solid var(--panel-border);border-radius:10px;padding:12px 14px;
-  }
+        /* Glassmorphism Common */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--card-radius);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease;
+        }
 
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
-  .grid2{display:grid;grid-template-columns:2fr 1.6fr;gap:12px;margin-bottom:12px;}
+        .glass-panel:hover {
+            border-color: rgba(0, 242, 254, 0.35);
+            box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.1);
+        }
 
-  .stat-triplet{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;}
-  .stat-triplet > div{flex:1;}
+        /* Layout Container */
+        .app-container {
+            display: grid;
+            grid-template-columns: 240px 1fr 280px;
+            gap: 15px;
+            padding: 15px;
+            min-height: 100vh;
+        }
 
-  .barlegend{display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--text-dim);}
-  .barlegend .row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-  .swatch{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px;}
+        /* LEFT SIDEBAR */
+        .sidebar-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 18px 12px;
+        }
 
-  .region-bars{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
-  .region-bars .row{display:grid;grid-template-columns:70px 1fr 30px;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);}
-  .track{height:6px;border-radius:4px;background:rgba(255,255,255,0.05);overflow:hidden;}
-  .fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));}
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
 
-  .chart-wrap{position:relative;width:100%;height:150px;margin-top:6px;}
-  .chart-wrap.sm{height:120px;}
-  .chart-wrap.donut{height:130px;}
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00f2fe, #00e676);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #04080e;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
 
-  .staff-photo{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    color:var(--text-faint);font-size:11px;text-align:center;height:100%;gap:8px;
-  }
-  .avatar-ring{
-    width:78px;height:78px;border-radius:50%;
-    border:2px solid var(--green);
-    display:flex;align-items:center;justify-content:center;
-    font-size:26px;font-weight:700;color:var(--green);
-    box-shadow:0 0 14px var(--green-glow);
-  }
+        .brand-title h2 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #fff;
+        }
 
-  .news-item{padding:8px 0;border-bottom:1px solid var(--panel-border);font-size:11px;}
-  .news-item:last-child{border-bottom:none;}
-  .news-date{color:var(--text-faint);font-size:10px;margin-top:2px;}
+        .brand-title p {
+            font-size: 10px;
+            color: var(--accent-cyan);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
 
-  /* AI ASSISTANT SIDEBAR */
-  .ai-orb-wrap{display:flex;flex-direction:column;align-items:center;padding:6px 0 16px;}
-  .ai-orb{
-    width:96px;height:96px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, rgba(62,224,138,0.5), rgba(9,16,14,0.9) 70%);
-    border:1px solid var(--green-dim);
-    box-shadow:0 0 24px var(--green-glow);
-    position:relative;
-  }
-  .ai-hello{font-size:12px;color:var(--text-dim);margin-top:10px;text-align:center;line-height:1.5;}
-  .ai-hello b{color:var(--text);}
-  .ai-section{margin-top:16px;}
-  .ai-section h3{font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;}
-  .ai-section.opp h3{color:var(--green);}
-  .ai-section.warn h3{color:var(--amber);}
-  .ai-section.risk h3{color:var(--red);}
-  .ai-item{display:flex;gap:6px;font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5;}
-  .ai-item .bullet{flex-shrink:0;margin-top:5px;width:5px;height:5px;border-radius:50%;}
-  .mic{
-    width:70px;height:70px;border-radius:50%;
-    border:1.5px solid var(--green);
-    display:flex;align-items:center;justify-content:center;
-    margin:20px auto 8px;color:var(--green);font-size:22px;
-    box-shadow:0 0 14px var(--green-glow);
-  }
-  .mic-label{text-align:center;font-size:11px;color:var(--text-dim);}
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
 
-  @media (max-width:1100px){
-    .shell{grid-template-columns:1fr;}
-    .kpi-row{grid-template-columns:repeat(4,1fr);}
-    .grid3{grid-template-columns:1fr;}
-    .grid2{grid-template-columns:1fr;}
-  }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
 
-  /* MODULE VISIBILITY */
-  [data-module].module-hidden{display:none;}
+        .nav-item:hover, .nav-item.active {
+            background: rgba(0, 242, 254, 0.08);
+            color: #fff;
+            border-left: 3px solid var(--accent-cyan);
+        }
 
-  /* CONFIG BUTTON */
-  .cfg-btn{
-    display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);
-    background:rgba(255,255,255,0.03);border:1px solid var(--panel-border);
-    padding:5px 12px;border-radius:20px;cursor:pointer;
-  }
-  .cfg-btn:hover{color:var(--text);border-color:var(--panel-border-strong);}
-  .cfg-btn .gear{color:var(--green);}
+        .nav-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-  /* CONFIG MODAL */
-  .cfg-overlay{
-    position:absolute;inset:0;background:rgba(3,6,8,0.7);
-    display:none;align-items:flex-start;justify-content:center;
-    padding:60px 20px;z-index:50;
-  }
-  .cfg-overlay.open{display:flex;}
-  .cfg-modal{
-    width:100%;max-width:680px;
-    background:linear-gradient(180deg, rgba(18,32,28,0.98), rgba(9,16,14,0.98));
-    border:1px solid var(--panel-border-strong);border-radius:12px;
-    padding:20px 22px;max-height:80vh;overflow:auto;
-  }
-  .cfg-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-  .cfg-head h2{font-size:15px;font-weight:700;}
-  .cfg-close{cursor:pointer;color:var(--text-dim);font-size:16px;line-height:1;padding:4px;}
-  .cfg-close:hover{color:var(--text);}
-  .cfg-sub{font-size:11px;color:var(--text-dim);margin-bottom:16px;}
-  .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .cfg-card{
-    border:1px solid var(--panel-border);border-radius:8px;padding:10px 12px;
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-  }
-  .cfg-card.disabled{opacity:0.5;}
-  .cfg-card-name{font-size:12px;font-weight:600;}
-  .cfg-card-desc{font-size:10px;color:var(--text-dim);margin-top:2px;}
-  .cfg-toggle-btn{cursor:pointer;}
-  @media (max-width:600px){.cfg-grid{grid-template-columns:1fr;}}
-</style>
+        .nav-item i {
+            width: 18px;
+            text-align: center;
+            color: var(--accent-cyan);
+        }
+
+        /* Switch toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 28px;
+            height: 15px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #1e293b;
+            transition: .3s;
+            border-radius: 15px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 11px;
+            width: 11px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(13px);
+        }
+
+        /* Sidebar Footer Widget */
+        .location-widget {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .location-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .sync-status {
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.4; }
+        }
+
+        /* MAIN CONTENT AREA */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Top Bar Header */
+        .dashboard-topbar {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .topbar-title h1 {
+            font-size: 18px;
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .badge-live {
+            background: rgba(0, 230, 118, 0.12);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .topbar-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .clock-display {
+            font-family: monospace;
+            font-size: 18px;
+            color: var(--accent-cyan);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .date-display {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Top KPI Cards Ribbon */
+        .kpi-ribbon {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+        }
+
+        .kpi-card {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .kpi-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .kpi-trend {
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .trend-up { color: var(--accent-green); }
+        .trend-down { color: var(--accent-red); }
+
+        /* Dashboard Grid Layout */
+        .grid-dashboard {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 15px;
+        }
+
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        .widget-card {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 230px;
+        }
+
+        .widget-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+        }
+
+        .widget-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .widget-title i {
+            color: var(--accent-cyan);
+            font-size: 14px;
+        }
+
+        .widget-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+
+        /* Inner metric stats row */
+        .stat-group {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .val {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .stat-item .lbl {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* RIGHT SIDEBAR - AI ASSISTANT */
+        .sidebar-right {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 18px 15px;
+        }
+
+        .ai-header {
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .ai-sphere-container {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-sphere {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #00f2fe, #0a192f 70%, #000);
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.6), inset 0 0 15px rgba(0, 230, 118, 0.5);
+            animation: floatOrb 4s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes floatOrb {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(180deg); }
+        }
+
+        .ai-sphere i {
+            font-size: 28px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .ai-title h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .ai-title p {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* AI Feed Sections */
+        .ai-feed {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+
+        .ai-section-title {
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 5px;
+        }
+
+        .ai-section-title.opp { color: var(--accent-green); }
+        .ai-section-title.att { color: var(--accent-yellow); }
+        .ai-section-title.rsk { color: var(--accent-red); }
+
+        .ai-item {
+            background: rgba(0, 0, 0, 0.25);
+            border-left: 2px solid transparent;
+            padding: 8px 10px;
+            border-radius: 4px;
+            line-height: 1.4;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .ai-item:hover {
+            background: rgba(0, 242, 254, 0.08);
+        }
+
+        .ai-item.opp { border-color: var(--accent-green); }
+        .ai-item.att { border-color: var(--accent-yellow); }
+        .ai-item.rsk { border-color: var(--accent-red); }
+
+        /* Voice Mic Button */
+        .voice-btn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .mic-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-cyan);
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--accent-cyan);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        .mic-btn:hover {
+            background: var(--accent-cyan);
+            color: #04080e;
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.7);
+        }
+
+        .mic-btn.active {
+            animation: micPulse 1s infinite alternate;
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+            color: #fff;
+        }
+
+        @keyframes micPulse {
+            from { box-shadow: 0 0 10px var(--accent-red); }
+            to { box-shadow: 0 0 25px var(--accent-red); }
+        }
+
+        .voice-label {
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 200px 1fr;
+            }
+            .sidebar-right {
+                display: none;
+            }
+            .kpi-ribbon {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar-left {
+                display: none;
+            }
+            .kpi-ribbon {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .col-4, .col-6, .col-8 {
+                grid-column: span 12;
+            }
+        }
+    </style>
 </head>
 <body>
-<h2 class="sr-only">Panel de control estilo centro de mando, con tema oscuro y acentos verdes, mostrando KPIs de ventas, clientes, operaciones, cadena de suministro, talento, sostenibilidad y un asistente de IA con recomendaciones.</h2>
 
-<div class="shell">
+    <div class="app-container">
+        <!-- LEFT NAVIGATION SIDEBAR -->
+        <aside class="sidebar-left glass-panel">
+            <div class="brand-header">
+                <div class="brand-logo">g</div>
+                <div class="brand-title">
+                    <h2>Gonzalo Rosendo</h2>
+                    <p>Data & Formation</p>
+                </div>
+            </div>
 
-  <!-- LEFT NAV -->
-  <aside class="panel">
-    <div class="logo-row">
-      <div class="logo-mark">GR</div>
-      <div>
-        <div class="brand-name">Gonzalo Rosendo</div>
-        <div class="brand-sub">DATA &amp; FORMATION</div>
-      </div>
+            <nav class="nav-menu">
+                <div class="nav-item active" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-table-cells-large"></i><span>DASHBOARDS</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-chart-line"></i><span>Resumen General</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-cart-shopping"></i><span>Ventas</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-users"></i><span>Clientes</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-gears"></i><span>Operaciones</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-truck-fast"></i><span>Cadena de Suministro</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-list-check"></i><span>Proyectos</span></div>
+                    <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-user-tie"></i><span>Talento y Cultura</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-leaf"></i><span>Sostenibilidad</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-shield-halved"></i><span>Riesgos</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-bell"></i><span>Alertas y Noticias</span></div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="nav-item" onclick="selectNav(this)">
+                    <div class="nav-item-left"><i class="fa-solid fa-sliders"></i><span>Configuración</span></div>
+                    <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+                </div>
+            </nav>
+
+            <div class="location-widget">
+                <div class="location-head">
+                    <i class="fa-solid fa-location-dot" style="color: var(--accent-cyan);"></i>
+                    <span>SEVILLA, ESPAÑA</span>
+                </div>
+                <div style="color: var(--text-muted); display:flex; justify-content:space-between;">
+                    <span><i class="fa-solid fa-sun" style="color:#ffb300;"></i> 22°C Despejado</span>
+                </div>
+                <div class="sync-status">
+                    <div class="pulse-dot"></div>
+                    <span>Sincronizado: <span id="sync-time">22:35:16</span></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+        <main class="main-content">
+            <!-- Top Command Bar -->
+            <header class="dashboard-topbar glass-panel">
+                <div class="topbar-title">
+                    <h1>Centro de Mando Integral</h1>
+                    <div class="badge-live">
+                        <i class="fa-solid fa-database"></i> DATOS 100% ACTUALIZADOS
+                    </div>
+                </div>
+
+                <div class="topbar-controls">
+                    <div class="badge-live" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">
+                        <i class="fa-solid fa-wifi"></i> EN TIEMPO REAL
+                    </div>
+                    <div class="clock-display" id="live-clock">22:35:00</div>
+                    <div class="date-display">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span>06 MAYO 2025</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Top KPI Ribbon -->
+            <section class="kpi-ribbon">
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Ventas Totales</span>
+                    <span class="kpi-value">€2,847,654</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 15.3% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Beneficio Neto</span>
+                    <span class="kpi-value">€312,456</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 14.2% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Pedidos Totales</span>
+                    <span class="kpi-value">18,245</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 12.5% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Ticket Medio</span>
+                    <span class="kpi-value">€23.45</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 8.7% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Clientes Activos</span>
+                    <span class="kpi-value">2,409</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 13.1% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Tiendas Activas</span>
+                    <span class="kpi-value">152</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 3.4% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Satisfacción</span>
+                    <span class="kpi-value">4.8/5</span>
+                    <span class="kpi-trend trend-up"><i class="fa-solid fa-caret-up"></i> 9.1% vs mes anterior</span>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <span class="kpi-label">Sistemas</span>
+                    <span class="kpi-value" style="color: var(--accent-green);">98%</span>
+                    <span class="kpi-trend" style="color: var(--accent-cyan);"><i class="fa-solid fa-check"></i> Operativo</span>
+                </div>
+            </section>
+
+            <!-- Dashboard Grid Widgets -->
+            <section class="grid-dashboard">
+                <!-- CLIENTES CARD -->
+                <div class="widget-card glass-panel col-6">
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-users"></i> Clientes</div>
+                        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-muted); cursor: pointer;"></i>
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <div class="lbl">Clientes Activos</div>
+                            <div class="val">2,409 <span class="trend-up" style="font-size:10px;">▲ 13.1%</span></div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Retención</div>
+                            <div class="val">89% <span class="trend-up" style="font-size:10px;">▲ 5.2%</span></div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Satisfacción</div>
+                            <div class="val">4.8/5 <span class="trend-up" style="font-size:10px;">▲ 9.1%</span></div>
+                        </div>
+                    </div>
+                    <div class="widget-body" style="height: 140px;">
+                        <canvas id="chartClientes"></canvas>
+                    </div>
+                </div>
+
+                <!-- OPERACIONES CARD -->
+                <div class="widget-card glass-panel col-6">
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-gears"></i> Operaciones</div>
+                        <i class="fa-solid fa-ellipsis-vertical" style="color: var(--text-muted); cursor: pointer;"></i>
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <div class="lbl">Nivel de Servicio</div>
+                            <div class="val">96% <span class="trend-up" style="font-size:10px;">▲ 4.3%</span></div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Pedidos Entregados</div>
+                            <div class="val">18,245 <span class="trend-up" style="font-size:10px;">▲ 12.5%</span></div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Eficiencia</div>
+                            <div class="val">92% <span class="trend-up" style="font-size:10px;">▲ 6.7%</span></div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Calidad</div>
+                            <div class="val">98.1% <span class="trend-up" style="font-size:10px;">▲ 4.3%</span></div>
+                        </div>
+                    </div>
+                    <div class="widget-body" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; height:140px;">
+                        <div style="flex: 1; height: 100%;">
+                            <canvas id="chartOperaciones"></canvas>
+                        </div>
+                        <div style="width: 130px; text-align:center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            <div style="font-size: 10px; color: var(--text-muted);">TIEMPO MEDIO ENTREGA</div>
+                            <div style="font-size: 22px; font-weight: bold; color: var(--accent-cyan); margin: 6px 0;">23 min</div>
+                            <div class="trend-down" style="font-size: 10px;"><i class="fa-solid fa-caret-down"></i> 3.2% mejora</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROYECTOS ESTRATÉGICOS -->
+                <div class="widget-card glass-panel col-4">
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-diagram-project"></i> Proyectos Estratégicos</div>
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <div class="lbl">Activos</div>
+                            <div class="val">28</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">En Plazo</div>
+                            <div class="val" style="color:var(--accent-green);">71%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">En Riesgo</div>
+                            <div class="val" style="color:var(--accent-yellow);">18%</div>
+                        </div>
+                    </div>
+                    <div class="widget-body" style="height: 130px;">
+                        <canvas id="chartProyectos"></canvas>
+                    </div>
+                </div>
+
+                <!-- TALENTO Y CULTURA -->
+                <div class="widget-card glass-panel col-4">
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-user-group"></i> Talento y Cultura</div>
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <div class="lbl">Empleados</div>
+                            <div class="val">756</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Rotación</div>
+                            <div class="val">8.1%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="lbl">Absentismo</div>
+                            <div class="val">3.2%</div>
+                        </div>
+                    </div>
+                    <div class="widget-body" style="height: 130px;">
+                        <canvas id="chartTalento"></canvas>
+                    </div>
+                </div>
+
+                <!-- ANÁLISIS GEOGRÁFICO DE VENTAS -->
+                <div class="widget-card glass-panel col-4">
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-earth-americas"></i> Ventas por País</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; margin-top:5px;">
+                        <div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
+                            <span>🇪🇸 España</span> <span style="font-weight:bold; color:var(--accent-cyan);">€632K <span class="trend-up" style="font-size:10px;">▲ 15.2%</span></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
+                            <span>🇫🇷 Francia</span> <span style="font-weight:bold; color:var(--accent-cyan);">€518K <span class="trend-up" style="font-size:10px;">▲ 12.3%</span></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
+                            <span>🇮🇹 Italia</span> <span style="font-weight:bold; color:var(--accent-cyan);">€412K <span class="trend-up" style="font-size:10px;">▲ 8.1%</span></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
+                            <span>🇵🇹 Portugal</span> <span style="font-weight:bold; color:var(--accent-cyan);">€326K <span class="trend-up" style="font-size:10px;">▲ 7.2%</span></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
+                            <span>🇩🇪 Alemania</span> <span style="font-weight:bold; color:var(--accent-cyan);">€284K <span class="trend-up" style="font-size:10px;">▲ 6.5%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- RIGHT AI ASSISTANT SIDEBAR -->
+        <aside class="sidebar-right glass-panel">
+            <div class="ai-header">
+                <div class="ai-sphere-container">
+                    <div class="ai-sphere">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                </div>
+                <div class="ai-title">
+                    <h3>gIA</h3>
+                    <p>Asistente Inteligente</p>
+                </div>
+            </div>
+
+            <div style="background: rgba(0, 242, 254, 0.05); border: 1px solid rgba(0, 242, 254, 0.2); padding: 10px; border-radius: 8px; font-size: 11px; line-height: 1.4;">
+                <span style="color: var(--accent-cyan); font-weight: bold;">Hola Gonzalo,</span><br>
+                aquí tienes el análisis ejecutivo en tiempo real:
+            </div>
+
+            <div class="ai-feed">
+                <div>
+                    <div class="ai-section-title opp"><i class="fa-solid fa-arrow-trend-up"></i> OPORTUNIDADES</div>
+                    <div class="ai-item opp">
+                        <strong>Las ventas han aumentado un 15.3%</strong> vs el mes anterior con alta conversión online.
+                    </div>
+                    <div class="ai-item opp" style="margin-top: 4px;">
+                        Excelente retención de clientes (89%) con mejora de 5.2%.
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ai-section-title att"><i class="fa-solid fa-triangle-exclamation"></i> ATENCIONES</div>
+                    <div class="ai-item att">
+                        Retrasos en la región Este han aumentado levemente al 2.6%.
+                    </div>
+                    <div class="ai-item att" style="margin-top: 4px;">
+                        La rotación de personal subió al 8.1% en operarios.
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ai-section-title rsk"><i class="fa-solid fa-circle-exclamation"></i> RIESGOS</div>
+                    <div class="ai-item rsk">
+                        Riesgo de suministro en rutas Asia es alto (5.7%).
+                    </div>
+                </div>
+            </div>
+
+            <div class="voice-btn-container">
+                <button class="mic-btn" id="micButton" onclick="toggleVoiceSim()">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <span class="voice-label" id="micStatus">PULSA PARA HABLAR</span>
+            </div>
+        </aside>
     </div>
-    <nav class="navlist" id="navlist"></nav>
-    <div class="mini-weather">
-      <div class="city">Sevilla, España</div>
-      <div class="temp" id="temp">—</div>
-      <div class="eyebrow" id="weatherDesc">Cargando...</div>
-    </div>
-    <div class="sync">
-      <div class="live">● Sincronizado</div>
-      <div style="margin-top:4px;">Última actualización:<br><span id="lastSync"></span></div>
-    </div>
-  </aside>
 
-  <!-- CENTER -->
-  <main>
-    <div class="header">
-      <h1>CENTRO DE MANDO INTEGRAL</h1>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <div class="status-pill"><span style="color:var(--green);">●</span> Datos 100% actualizados</div>
-        <div class="clock" id="clock">--:--</div>
-        <div class="status-pill"><span style="color:var(--green);">●</span> En tiempo real</div>
-        <div class="datebadge" id="today"></div>
-        <div class="cfg-btn" id="cfgOpenBtn"><span class="gear">⚙</span> Configuración</div>
-      </div>
-    </div>
+    <!-- Interactive Scripts -->
+    <script>
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('live-clock').textContent = `${hours}:${minutes}:${seconds}`;
+            document.getElementById('sync-time').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-    <div class="kpi-row" id="kpiRow" data-module="resumen"></div>
+        // Voice Assistant Simulation
+        let isListening = false;
+        function toggleVoiceSim() {
+            const btn = document.getElementById('micButton');
+            const status = document.getElementById('micStatus');
+            isListening = !isListening;
+            
+            if (isListening) {
+                btn.classList.add('active');
+                status.textContent = 'ESCUCHANDO...';
+                status.style.color = 'var(--accent-red)';
+                setTimeout(() => {
+                    status.textContent = 'PROCESANDO CONSULTA...';
+                    status.style.color = 'var(--accent-cyan)';
+                }, 2500);
+                setTimeout(() => {
+                    alert('gIA Response: "Las ventas muestran una tendencia positiva con un incremento global del +15.3% liderado por la región España."');
+                    btn.classList.remove('active');
+                    status.textContent = 'PULSA PARA HABLAR';
+                    status.style.color = 'var(--text-muted)';
+                    isListening = false;
+                }, 4500);
+            }
+        }
 
-    <div class="grid2">
-      <section class="panel" data-module="clientes">
-        <div class="panel-title"><span class="dot"></span>Clientes</div>
-        <div class="stat-triplet">
-          <div><div class="eyebrow">Clientes activos</div><div class="metric-val">2.409</div><div class="metric-delta up">▲ 13.1%</div></div>
-          <div><div class="eyebrow">Retención</div><div class="metric-val">89%</div><div class="metric-delta up">▲ 5.2%</div></div>
-          <div><div class="eyebrow">Satisfacción</div><div class="metric-val">4.8/5</div><div class="metric-delta up">▲ 9.1%</div></div>
-        </div>
-        <div class="eyebrow" style="margin-bottom:4px;">Evolución clientes activos</div>
-        <div class="chart-wrap sm"><canvas id="clientesChart" role="img" aria-label="Evolución de clientes activos de enero a diciembre, crecimiento sostenido de 0,4M a 2,4M">Clientes activos creciendo cada mes hasta 2.409.</canvas></div>
-        <div class="eyebrow" style="margin:10px 0 6px;">Distribución por región</div>
-        <div class="barlegend">
-          <div class="row"><span><span class="swatch" style="background:var(--green);"></span>Europa</span><span>45%</span></div>
-          <div class="row"><span><span class="swatch" style="background:var(--blue);"></span>América</span><span>25%</span></div>
-          <div class="row"><span><span class="swatch" style="background:var(--amber);"></span>Asia</span><span>20%</span></div>
-          <div class="row"><span><span class="swatch" style="background:var(--red);"></span>África</span><span>6%</span></div>
-        </div>
-      </section>
+        function selectNav(element) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
 
-      <section class="panel" data-module="operaciones">
-        <div class="panel-title"><span class="dot"></span>Operaciones</div>
-        <div class="stat-triplet">
-          <div><div class="eyebrow">Nivel de servicio</div><div class="metric-val">96%</div><div class="metric-delta up">▲ 4.3%</div></div>
-          <div><div class="eyebrow">Pedidos entregados</div><div class="metric-val">18.245</div><div class="metric-delta up">▲ 12.5%</div></div>
-          <div><div class="eyebrow">Eficiencia</div><div class="metric-val">92%</div><div class="metric-delta up">▲ 6.7%</div></div>
-        </div>
-        <div class="eyebrow" style="margin-bottom:6px;">Retrasos por región</div>
-        <div class="region-bars">
-          <div class="row"><span>Norte</span><div class="track"><div class="fill" style="width:18%;"></div></div><span>1.8%</span></div>
-          <div class="row"><span>Centro</span><div class="track"><div class="fill" style="width:23%;"></div></div><span>2.3%</span></div>
-          <div class="row"><span>Este</span><div class="track"><div class="fill" style="width:26%;"></div></div><span>2.6%</span></div>
-          <div class="row"><span>Sur</span><div class="track"><div class="fill" style="width:21%;"></div></div><span>2.1%</span></div>
-        </div>
-        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
-          <div class="eyebrow">Tiempo medio entrega</div>
-          <div><span class="metric-val" style="font-size:17px;">23 min</span> <span class="metric-delta down">▼ 3.2%</span></div>
-        </div>
-      </section>
-    </div>
+        // Charts Initialization
+        window.addEventListener('load', () => {
+            const chartOptionsBase = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#8899a6', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#8899a6', font: { size: 10 } }
+                    }
+                }
+            };
 
-    <div class="grid3">
-      <section class="panel" data-module="suministro">
-        <div class="panel-title"><span class="dot"></span>Cadena de suministro</div>
-        <div class="stat-triplet">
-          <div><div class="eyebrow">Nivel de servicio</div><div class="metric-val" style="font-size:16px;">96%</div><div class="metric-delta up">▲ 4.3%</div></div>
-          <div><div class="eyebrow">Riesgo</div><div class="metric-val" style="font-size:16px;color:var(--green);">Bajo</div></div>
-        </div>
-        <div class="eyebrow" style="margin:8px 0 6px;">Retrasos por región</div>
-        <div class="chart-wrap donut"><canvas id="suministroChart" role="img" aria-label="Retrasos por región: Europa 2,1%, América 3,4%, Asia 5,7%, África 4,1%, Oceanía 1,3%">Retrasos por región en la cadena de suministro.</canvas></div>
-      </section>
+            // Clientes Line Chart
+            const ctxClientes = document.getElementById('chartClientes').getContext('2d');
+            const gradientCyan = ctxClientes.createLinearGradient(0, 0, 0, 150);
+            gradientCyan.addColorStop(0, 'rgba(0, 242, 254, 0.4)');
+            gradientCyan.addColorStop(1, 'rgba(0, 242, 254, 0.0)');
 
-      <section class="panel" data-module="proyectos">
-        <div class="panel-title"><span class="dot"></span>Proyectos estratégicos</div>
-        <div class="stat-triplet">
-          <div><div class="eyebrow">Activos</div><div class="metric-val" style="font-size:16px;">28</div></div>
-          <div><div class="eyebrow">En plazo</div><div class="metric-val" style="font-size:16px;">71%</div></div>
-          <div><div class="eyebrow">Completados</div><div class="metric-val" style="font-size:16px;">11</div></div>
-        </div>
-        <div class="chart-wrap donut"><canvas id="proyectosChart" role="img" aria-label="Distribución de proyectos por estado: en plazo 71%, en riesgo 18%, retrasado 11%">Distribución de proyectos por estado.</canvas></div>
-      </section>
+            new Chart(ctxClientes, {
+                type: 'line',
+                data: {
+                    labels: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
+                    datasets: [{
+                        data: [1200, 1350, 1500, 1680, 1850, 2010, 2150, 2220, 2300, 2350, 2390, 2409],
+                        borderColor: '#00f2fe',
+                        borderWidth: 2,
+                        backgroundColor: gradientCyan,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#00f2fe'
+                    }]
+                },
+                options: chartOptionsBase
+            });
 
-      <section class="panel" data-module="talento">
-        <div class="panel-title"><span class="dot"></span>Talento y cultura</div>
-        <div class="staff-photo">
-          <div class="avatar-ring">GR</div>
-          <div>756 empleados · satisfacción 4.6/5</div>
-        </div>
-      </section>
-    </div>
+            // Operaciones Bar Chart
+            const ctxOperaciones = document.getElementById('chartOperaciones').getContext('2d');
+            new Chart(ctxOperaciones, {
+                type: 'bar',
+                data: {
+                    labels: ['Norte', 'Centro', 'Este', 'Sur', 'Canarias'],
+                    datasets: [{
+                        data: [98, 96, 92, 95, 94],
+                        backgroundColor: ['#00e676', '#00f2fe', '#ffb300', '#00e676', '#00f2fe'],
+                        borderRadius: 4
+                    }]
+                },
+                options: chartOptionsBase
+            });
 
-    <div class="grid3">
-      <section class="panel" data-module="sostenibilidad">
-        <div class="panel-title"><span class="dot"></span>Sostenibilidad</div>
-        <div class="stat-triplet">
-          <div><div class="eyebrow">Emisiones CO₂</div><div class="metric-val" style="font-size:16px;color:var(--green);">-18%</div></div>
-          <div><div class="eyebrow">Consumo energía</div><div class="metric-val" style="font-size:16px;color:var(--green);">-12%</div></div>
-          <div><div class="eyebrow">Residuos reciclados</div><div class="metric-val" style="font-size:16px;">78%</div></div>
-        </div>
-        <div class="chart-wrap sm"><canvas id="sostenibilidadChart" role="img" aria-label="Evolución de emisiones de CO2 de enero a diciembre, tendencia descendente">Evolución de emisiones de CO2, tendencia a la baja.</canvas></div>
-      </section>
+            // Proyectos Doughnut Chart
+            const ctxProyectos = document.getElementById('chartProyectos').getContext('2d');
+            new Chart(ctxProyectos, {
+                type: 'doughnut',
+                data: {
+                    labels: ['En Plazo (71%)', 'En Riesgo (18%)', 'Retrasado (11%)'],
+                    datasets: [{
+                        data: [71, 18, 11],
+                        backgroundColor: ['#00e676', '#ffb300', '#ff5252'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: { color: '#e2e8f0', font: { size: 10 }, boxWidth: 12 }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
 
-      <section class="panel" data-module="ventas-geo">
-        <div class="panel-title"><span class="dot"></span>Análisis geográfico de ventas</div>
-        <div class="eyebrow" style="margin-bottom:8px;">Ventas por país (top 5)</div>
-        <div class="region-bars">
-          <div class="row"><span>España</span><div class="track"><div class="fill" style="width:100%;"></div></div><span>632k</span></div>
-          <div class="row"><span>Francia</span><div class="track"><div class="fill" style="width:82%;"></div></div><span>518k</span></div>
-          <div class="row"><span>Italia</span><div class="track"><div class="fill" style="width:65%;"></div></div><span>412k</span></div>
-          <div class="row"><span>Portugal</span><div class="track"><div class="fill" style="width:51%;"></div></div><span>326k</span></div>
-          <div class="row"><span>Alemania</span><div class="track"><div class="fill" style="width:45%;"></div></div><span>284k</span></div>
-        </div>
-      </section>
-
-      <section class="panel" data-module="noticias">
-        <div class="panel-title"><span class="dot"></span>Noticias y alertas</div>
-        <div class="news-item">Nueva campaña de verano: 15% venta con barbacoa <div class="news-date">06/05/2025</div></div>
-        <div class="news-item">Apertura nueva tienda en Sevilla Nervión <div class="news-date">15/05/2025</div></div>
-        <div class="news-item">Lanzamiento nuevo menú gourmet <div class="news-date">20/05/2025</div></div>
-      </section>
-    </div>
-  </main>
-
-  <!-- RIGHT AI SIDEBAR -->
-  <aside class="panel" data-module="asistente-ia">
-    <div class="ai-orb-wrap">
-      <div class="ai-orb"></div>
-      <div class="ai-hello"><b>Hola,</b><br>aquí tienes el análisis de hoy</div>
-    </div>
-
-    <div class="ai-section opp">
-      <h3>Oportunidades</h3>
-      <div class="ai-item"><span class="bullet" style="background:var(--green);"></span>Las ventas han aumentado un 15.3% vs el mes anterior.</div>
-      <div class="ai-item"><span class="bullet" style="background:var(--green);"></span>Excelente retención de clientes (89%) con mejora del 5.2%.</div>
-      <div class="ai-item"><span class="bullet" style="background:var(--green);"></span>Aumente el ticket medio en tiendas del sur (+8.7%).</div>
-    </div>
-
-    <div class="ai-section warn">
-      <h3>Atenciones</h3>
-      <div class="ai-item"><span class="bullet" style="background:var(--amber);"></span>Retrasos en la región este han aumentado al 2.6%.</div>
-      <div class="ai-item"><span class="bullet" style="background:var(--amber);"></span>La rotación de personal subió al 8.1% (+1.3%).</div>
-    </div>
-
-    <div class="ai-section risk">
-      <h3>Riesgos</h3>
-      <div class="ai-item"><span class="bullet" style="background:var(--red);"></span>Riesgo de suministro en Asia es alto (5.7%).</div>
-      <div class="ai-item"><span class="bullet" style="background:var(--red);"></span>Incremento de retrasos en pedidos (3.2%).</div>
-    </div>
-
-    <div class="mic"><i>🎙</i></div>
-    <div class="mic-label">Pulsa para hablar</div>
-  </aside>
-
-  <!-- CONFIG MODAL -->
-  <div class="cfg-overlay" id="cfgOverlay">
-    <div class="cfg-modal">
-      <div class="cfg-head">
-        <h2>Configurar módulos</h2>
-        <span class="cfg-close" id="cfgCloseBtn">✕</span>
-      </div>
-      <div class="cfg-sub">Activa o desactiva cada módulo para personalizar tu centro de mando.</div>
-      <div class="cfg-grid" id="cfgGrid"></div>
-    </div>
-  </div>
-
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script>
-  var modules=[
-    {key:"resumen",label:"Resumen general (KPIs)",desc:"Ventas, beneficio, pedidos y satisfacción",on:true},
-    {key:"clientes",label:"Clientes",desc:"Clientes activos, retención y regiones",on:true},
-    {key:"operaciones",label:"Operaciones",desc:"Nivel de servicio y entregas",on:true},
-    {key:"suministro",label:"Cadena de suministro",desc:"Riesgo y retrasos por región",on:true},
-    {key:"proyectos",label:"Proyectos estratégicos",desc:"Proyectos activos y su estado",on:true},
-    {key:"talento",label:"Talento y cultura",desc:"Plantilla y satisfacción del equipo",on:true},
-    {key:"sostenibilidad",label:"Sostenibilidad",desc:"Emisiones, energía y reciclaje",on:true},
-    {key:"ventas-geo",label:"Análisis geográfico de ventas",desc:"Top países por ventas",on:true},
-    {key:"noticias",label:"Noticias y alertas",desc:"Últimas novedades del negocio",on:true},
-    {key:"asistente-ia",label:"Asistente IA",desc:"Oportunidades, atenciones y riesgos",on:true}
-  ];
-
-  function applyModuleState(key,on){
-    document.querySelectorAll('[data-module="'+key+'"]').forEach(function(el){
-      el.classList.toggle("module-hidden",!on);
-    });
-  }
-
-  function renderNav(){
-    var html="";
-    modules.forEach(function(m){
-      html+='<div class="navitem" data-nav-key="'+m.key+'">'+m.label.split(" (")[0]+
-        '<span class="toggle '+(m.on?"on":"off")+'" data-toggle-key="'+m.key+'"></span></div>';
-    });
-    document.getElementById("navlist").innerHTML=html;
-    document.querySelectorAll("[data-toggle-key]").forEach(function(t){
-      t.addEventListener("click",function(e){
-        e.stopPropagation();
-        toggleModule(t.getAttribute("data-toggle-key"));
-      });
-    });
-  }
-
-  function renderCfgGrid(){
-    var html="";
-    modules.forEach(function(m){
-      html+='<div class="cfg-card'+(m.on?"":" disabled")+'" data-cfg-key="'+m.key+'">'+
-        '<div><div class="cfg-card-name">'+m.label+'</div><div class="cfg-card-desc">'+m.desc+'</div></div>'+
-        '<span class="toggle cfg-toggle-btn '+(m.on?"on":"off")+'" data-toggle-key="'+m.key+'"></span></div>';
-    });
-    document.getElementById("cfgGrid").innerHTML=html;
-    document.querySelectorAll("#cfgGrid [data-toggle-key]").forEach(function(t){
-      t.addEventListener("click",function(){toggleModule(t.getAttribute("data-toggle-key"));});
-    });
-  }
-
-  function toggleModule(key){
-    var m=modules.find(function(x){return x.key===key;});
-    if(!m)return;
-    m.on=!m.on;
-    applyModuleState(key,m.on);
-    renderNav();
-    renderCfgGrid();
-  }
-
-  renderNav();
-  renderCfgGrid();
-  modules.forEach(function(m){applyModuleState(m.key,m.on);});
-
-  var cfgOverlay=document.getElementById("cfgOverlay");
-  document.getElementById("cfgOpenBtn").addEventListener("click",function(){cfgOverlay.classList.add("open");});
-  document.getElementById("cfgCloseBtn").addEventListener("click",function(){cfgOverlay.classList.remove("open");});
-  cfgOverlay.addEventListener("click",function(e){if(e.target===cfgOverlay)cfgOverlay.classList.remove("open");});
-
-  function updateClock(){
-    var now=new Date();
-    var hh=String(now.getHours()).padStart(2,"0");
-    var mm=String(now.getMinutes()).padStart(2,"0");
-    document.getElementById("clock").textContent=hh+":"+mm;
-    document.getElementById("lastSync").textContent=hh+":"+mm+":"+String(now.getSeconds()).padStart(2,"0");
-  }
-  updateClock();
-  setInterval(updateClock,1000);
-  document.getElementById("today").textContent=new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"});
-  document.getElementById("temp").textContent="24°C";
-  document.getElementById("weatherDesc").textContent="Despejado";
-
-  var kpis=[
-    ["Ventas totales","€2.847.654","▲ 15.3%",true],
-    ["Beneficio neto","€312.456","▲ 14.2%",true],
-    ["Pedidos totales","18.245","▲ 12.5%",true],
-    ["Ticket medio","€23.45","▲ 8.7%",true],
-    ["Clientes activos","2.409","▲ 13.1%",true],
-    ["Tiendas activas","152","▲ 3.4%",true],
-    ["Satisfacción","4.8/5","▲ 9.1%",true],
-    ["Sistemas operativo","98%",null,null]
-  ];
-  var kpiHtml="";
-  kpis.forEach(function(k){
-    kpiHtml+='<div class="kpi-card"><div class="eyebrow">'+k[0]+'</div><div class="metric-val">'+k[1]+'</div>'+
-      (k[2]?'<div class="metric-delta up">'+k[2]+'</div>':'')+'</div>';
-  });
-  document.getElementById("kpiRow").innerHTML=kpiHtml;
-
-  var months=["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
-  var green="#3ee08a", greenDim="rgba(62,224,138,0.12)";
-
-  new Chart(document.getElementById("clientesChart"),{
-    type:"line",
-    data:{labels:months,datasets:[{data:[900,1050,1200,1400,1550,1700,1850,1980,2100,2220,2320,2409],
-      borderColor:green,backgroundColor:greenDim,fill:true,tension:0.35,pointRadius:0,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:"#5d6e67",font:{size:9}},grid:{display:false}},
-              y:{ticks:{color:"#5d6e67",font:{size:9}},grid:{color:"rgba(255,255,255,0.04)"}}}}
-  });
-
-  new Chart(document.getElementById("suministroChart"),{
-    type:"doughnut",
-    data:{labels:["Europa","América","Asia","África","Oceanía"],
-      datasets:[{data:[2.1,3.4,5.7,4.1,1.3],
-        backgroundColor:["#3ee08a","#5aa7e8","#e8c15a","#ef6a6a","#8a7fe8"],borderColor:"#0c151c",borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"65%",
-      plugins:{legend:{position:"bottom",labels:{color:"#8fa39a",font:{size:9},boxWidth:8,padding:8}}}}
-  });
-
-  new Chart(document.getElementById("proyectosChart"),{
-    type:"doughnut",
-    data:{labels:["En plazo","En riesgo","Retrasado"],
-      datasets:[{data:[71,18,11],backgroundColor:["#3ee08a","#e8c15a","#ef6a6a"],borderColor:"#0c151c",borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"65%",
-      plugins:{legend:{position:"bottom",labels:{color:"#8fa39a",font:{size:9},boxWidth:8,padding:8}}}}
-  });
-
-  new Chart(document.getElementById("sostenibilidadChart"),{
-    type:"line",
-    data:{labels:months,datasets:[{data:[145,140,132,128,120,115,108,102,96,90,85,80],
-      borderColor:green,backgroundColor:greenDim,fill:true,tension:0.35,pointRadius:0,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:"#5d6e67",font:{size:9}},grid:{display:false}},
-              y:{ticks:{color:"#5d6e67",font:{size:9}},grid:{color:"rgba(255,255,255,0.04)"}}}}
-  });
-</script>
+            // Talento Bar Chart
+            const ctxTalento = document.getElementById('chartTalento').getContext('2d');
+            new Chart(ctxTalento, {
+                type: 'bar',
+                data: {
+                    labels: ['<30 yrs', '30-45', '45-60', '>60'],
+                    datasets: [{
+                        data: [25, 50, 20, 5],
+                        backgroundColor: '#00f2fe',
+                        borderRadius: 4
+                    }]
+                },
+                options: chartOptionsBase
+            });
+        });
+    </script>
 </body>
 </html>

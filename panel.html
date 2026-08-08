@@ -1,0 +1,2908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Mando IA — Panel de Control Corporativo</title>
+<meta name="description" content="Panel de control corporativo en tiempo real con roles de Administrador y Usuario, gestión de usuarios, auditoría, KPIs, módulos y asistente ejecutivo.">
+<link rel="stylesheet" href="styles.css">
+<!-- D3.js Library v7 -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* Additional inline refinements for rich dashboard interactions */
+.kpi-badge-positive { color: var(--green); font-family: var(--font-mono); font-size: 11px; }
+.kpi-badge-negative { color: var(--red); font-family: var(--font-mono); font-size: 11px; }
+.delay-bar-container { background: rgba(255,255,255,0.05); border-radius: 4px; height: 8px; width: 100%; overflow: hidden; margin-top: 6px; }
+.delay-bar-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width .5s ease; }
+.delay-bar-fill.warning { background: var(--amber); }
+.delay-bar-fill.danger { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- Header Principal -->
+<header class="site">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <div class="brand-mark">GR</div>
+      <div class="brand-text">Centro de Mando IA<span>PANEL DE CONTROL CORPORATIVO</span></div>
+    </a>
+    <nav class="links">
+      <a href="index.html">Web Pública</a>
+      <a href="caracteristicas.html">Características</a>
+      <a href="precios.html">Precios</a>
+      <a href="panel.html" class="active">Panel en Vivo</a>
+      <div class="mobile-menu-cta">
+        <button onclick="handleLogout()" class="btn btn-ghost">Cerrar Sesión</button>
+      </div>
+    </nav>
+    <div class="nav-cta">
+      <span id="headerUserGreeting" style="font-family:var(--font-mono); font-size:11px; color:var(--green); white-space:nowrap;"></span>
+      <button onclick="handleLogout()" class="btn btn-ghost" style="padding:6px 14px; font-size:11px; min-height:36px;">Cerrar Sesión</button>
+      <button class="nav-toggle" aria-label="Abrir menú">☰</button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-page container">
+  <!-- Top Bar con Datos del Usuario y Rol -->
+  <div class="dash-topbar">
+    <div class="dash-user-info">
+      <div class="dash-avatar" id="userAvatar">GR</div>
+      <div class="dash-user-details">
+        <h2 id="userNameDisplay">Cargando usuario...</h2>
+        <div class="dash-user-meta">
+          <span id="userRoleBadge" class="role-badge-tag admin">ADMINISTRADOR</span> ·
+          <span id="userCompanyDisplay">Centro de Mando</span> ·
+          <span id="userDepartmentDisplay">Dirección General</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-top-actions" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <!-- Subscription Countdown Badge -->
+      <div id="topSubscriptionBadge" class="sub-countdown-badge" onclick="showTab('subscription', document.getElementById('subTabBtn'))" title="Ver estado de facturación y días restantes">
+        <span class="sub-pulse-dot"></span>
+        <span id="topSubStatusText">Suscripción: Calculando...</span>
+      </div>
+
+      <button class="btn btn-ghost" onclick="switchUserRoleTest()" title="Alternar temporalmente entre vista Admin y Usuario" style="font-size:11px; padding:8px 12px;">
+        <span id="roleToggleLabel">⚡ Probar como Usuario</span>
+      </button>
+      <button class="btn btn-primary" onclick="generateExecutiveReport()" style="font-size:12px; padding:8px 14px;">
+        <span>🧠 Análisis Ejecutivo IA</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Pestañas de Navegación del Panel -->
+  <div class="dash-tabs-bar">
+    <button class="dash-tab-btn active" onclick="showTab('kpis', this)">
+      <span>📊 Resumen General &amp; KPIs</span>
+    </button>
+    <button class="dash-tab-btn" id="subTabBtn" onclick="showTab('subscription', this)">
+      <span>💳 Suscripción &amp; Facturación</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('ai-advisor', this)">
+      <span>🧠 Asistente Ejecutivo IA</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('modules', this)">
+      <span>⚙️ Módulos Activos (8)</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('excel', this)">
+      <span>📥 Importador Excel</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('powerbi', this)">
+      <span>📊 Conector Power BI</span>
+    </button>
+    <button class="dash-tab-btn admin-tab" id="adminTabBtn" onclick="showTab('admin-panel', this)">
+      <span>🛡️ Gestión de Usuarios &amp; Roles (Admin)</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('profile', this)">
+      <span>👤 Mi Perfil &amp; Seguridad</span>
+    </button>
+  </div>
+
+  <!-- PESTAÑA 1: RESUMEN GENERAL & KPIS -->
+  <div id="tab-kpis" class="dash-view active">
+    <!-- Grid de KPIs principales -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+      
+      <!-- Ventas Totales -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Ventas Totales</span>
+          <span class="kpi-badge-positive" id="kpiVentasDelta">+15.3% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiVentasVal">€2,847,654</div>
+        <div style="font-size:11px; color:var(--text-dim);">Facturación neta acumulada en el periodo</div>
+      </div>
+
+      <!-- Margen / Beneficio -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Beneficio Neto</span>
+          <span class="kpi-badge-positive" id="kpiBeneficioDelta">+14.2% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiBeneficioVal">€312,456</div>
+        <div style="font-size:11px; color:var(--text-dim);">Margen neto consolidado (11.0% sobre ventas)</div>
+      </div>
+
+      <!-- Pedidos Totales -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Pedidos Totales</span>
+          <span class="kpi-badge-positive" id="kpiPedidosDelta">+12.5% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiPedidosVal">18,245</div>
+        <div style="font-size:11px; color:var(--text-dim);">Ticket medio por operación: <strong id="kpiTicketVal">€156.08</strong></div>
+      </div>
+
+      <!-- Nivel de Servicio -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Nivel de Servicio</span>
+          <span class="kpi-badge-positive" id="kpiServicioDelta">+1.2% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--green); margin:8px 0 4px;" id="kpiServicioVal">98.4%</div>
+        <div style="font-size:11px; color:var(--text-dim);">Retrasos logísticos globales: <strong id="kpiRetrasosVal" style="color:var(--amber);">1.8%</strong></div>
+      </div>
+
+      <!-- Satisfacción NPS -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Satisfacción NPS</span>
+          <span class="kpi-badge-positive">+3.1% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiNpsVal">94.6%</div>
+        <div style="font-size:11px; color:var(--text-dim);">Fidelización de cuentas y recurrencia</div>
+      </div>
+
+      <!-- Sostenibilidad ESG -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Huella CO2 (ESG)</span>
+          <span class="kpi-badge-positive">-8.5% ▼ (Mejora)</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--green); margin:8px 0 4px;" id="kpiCo2Val">24.8 tCO2</div>
+        <div style="font-size:11px; color:var(--text-dim);">Reducción de emisiones y energía</div>
+      </div>
+    </div>
+
+    <!-- COMPONENTE D3.JS: EVOLUCIÓN DE VENTAS (ÚLTIMOS 30 DÍAS) -->
+    <div class="d3-chart-wrapper" id="salesD3Card" style="margin-bottom: 24px;">
+      <div class="d3-chart-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span class="role-badge-tag user">D3.js v7 · SVG Vectorial</span>
+            <span class="eyebrow" style="font-size:10px;">Telemetría Diaria en Tiempo Real</span>
+          </div>
+          <h3 style="font-size:18px; margin:2px 0 4px; display:flex; align-items:center; gap:8px; color:var(--text);">
+            <span>📈 Evolución de Ventas — Últimos 30 Días</span>
+            <span class="live-pulse" style="width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 8px var(--green);" title="Sincronización activa"></span>
+          </h3>
+          <p style="font-size:12px; color:var(--text-dim); margin:0;">
+            Visualización analítica vectorial e interactiva: facturación diaria, objetivo previsto, volumen de pedidos y márgenes.
+          </p>
+        </div>
+
+        <!-- Key Metrics Summary Chips -->
+        <div class="d3-stats-strip">
+          <div class="d3-stat-box">
+            <span class="d3-stat-label">Total Periodo</span>
+            <span class="d3-stat-val" id="d3TotalSales">€2,847,654</span>
+            <span class="d3-stat-sub positive" id="d3TotalSalesTrend">+15.3% ▲</span>
+          </div>
+          <div class="d3-stat-box">
+            <span class="d3-stat-label">Promedio Diario</span>
+            <span class="d3-stat-val" id="d3AvgSales">€94,921</span>
+            <span class="d3-stat-sub">por jornada</span>
+          </div>
+          <div class="d3-stat-box">
+            <span class="d3-stat-label">Pico Máximo</span>
+            <span class="d3-stat-val" id="d3PeakSales" style="color:var(--green);">€128,450</span>
+            <span class="d3-stat-sub" id="d3PeakDate">02 Ago</span>
+          </div>
+          <div class="d3-stat-box">
+            <span class="d3-stat-label">Días s/ Objetivo</span>
+            <span class="d3-stat-val" id="d3TargetHitDays">24 / 30</span>
+            <span class="d3-stat-sub positive" id="d3TargetHitPct">80.0% éxito</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Bar (Metric selection, Time Range zoom, Curve Toggle, Simulation & Export) -->
+      <div class="d3-controls-bar">
+        <div class="d3-control-group">
+          <span class="d3-group-label">Métrica:</span>
+          <button class="d3-btn-toggle active" id="btnMetricSales" onclick="setD3Metric('sales')">Ventas (€)</button>
+          <button class="d3-btn-toggle" id="btnMetricCompare" onclick="setD3Metric('compare')">Ventas vs Objetivo</button>
+          <button class="d3-btn-toggle" id="btnMetricOrders" onclick="setD3Metric('orders')">Volumen Pedidos</button>
+          <button class="d3-btn-toggle" id="btnMetricMargin" onclick="setD3Metric('margin')">Margen Bruto (%)</button>
+        </div>
+
+        <div class="d3-control-group">
+          <span class="d3-group-label">Rango:</span>
+          <button class="d3-btn-toggle" id="btnRange7" onclick="setD3TimeRange(7)">7 Días</button>
+          <button class="d3-btn-toggle" id="btnRange14" onclick="setD3TimeRange(14)">14 Días</button>
+          <button class="d3-btn-toggle active" id="btnRange30" onclick="setD3TimeRange(30)">30 Días</button>
+        </div>
+
+        <div class="d3-control-group d3-aux-actions">
+          <button class="d3-btn-action" id="btnD3Curve" onclick="toggleD3Curve()" title="Alternar interpolación suave de curva">
+            <span id="btnD3CurveLabel">〰️ Curva Suave</span>
+          </button>
+          <button class="d3-btn-action" onclick="refreshD3Simulation()" title="Simular variación del día en vivo">
+            <span>⚡ Simular Día</span>
+          </button>
+          <button class="d3-btn-action" onclick="exportD3Svg()" title="Descargar visualización SVG vectorial">
+            <span>📥 Exportar SVG</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SVG Chart Canvas Container -->
+      <div class="d3-canvas-container" id="d3SalesChartContainer">
+        <!-- SVG dynamic element will be rendered by D3 -->
+        <div class="d3-chart-tooltip" id="d3ChartTooltip"></div>
+      </div>
+
+      <!-- Chart Legend & Footer -->
+      <div class="d3-chart-footer">
+        <div class="d3-legend-items">
+          <div class="d3-legend-item">
+            <span class="d3-legend-line sales-line"></span>
+            <span id="d3LegendLabelMain">Ventas Reales Diarias (€)</span>
+          </div>
+          <div class="d3-legend-item" id="d3LegendTargetItem">
+            <span class="d3-legend-line target-line"></span>
+            <span>Objetivo Diario Previsto (€)</span>
+          </div>
+          <div class="d3-legend-item">
+            <span class="d3-legend-dot max-dot"></span>
+            <span>Pico Máximo del Periodo</span>
+          </div>
+          <div class="d3-legend-item">
+            <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:linear-gradient(180deg, rgba(62,224,138,0.35), rgba(62,224,138,0.02)); border:1px solid rgba(62,224,138,0.3);"></span>
+            <span>Área de Tendencia Acumulada</span>
+          </div>
+        </div>
+        <div class="d3-footer-hint">
+          <span>💡 Pasa el cursor por la curva para explorar datos diarios detallados y comparativas.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparativas y Retrasos Regionales -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+      <!-- Histórico de Ventas Semestral -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <h3>Evolución Mensual (Real vs Objetivo)</h3>
+          <span class="role-badge-tag user">Sincronizado</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;" id="salesChartBars">
+          <!-- Dynamically populated bars -->
+        </div>
+      </div>
+
+      <!-- Retrasos por Delegación Regional -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <h3>Operaciones y Retrasos por Delegación</h3>
+          <span class="role-badge-tag admin">Tiempo Real</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-top:12px;" id="regionalDelaysList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 2: ASISTENTE EJECUTIVO IA -->
+  <div id="tab-ai-advisor" class="dash-view">
+    <div class="ai-insights-box">
+      <div class="ai-insights-header">
+        <div>
+          <span class="eyebrow">Inteligencia de Negocio</span>
+          <h2 style="font-size:20px; margin-top:4px;">Asistente Ejecutivo Adaptativo</h2>
+          <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">
+            Genera informes analíticos según tu perfil (<strong id="aiRoleLabel">Administrador</strong>) usando Gemini 3.6 Flash y métricas en vivo.
+          </p>
+        </div>
+        <button class="btn btn-primary" onclick="generateExecutiveReport()" id="btnGenAI">
+          <span>⚡ Generar Análisis Ahora</span>
+        </button>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <input type="text" id="aiCustomPrompt" class="form-input" placeholder="Pregunta personalizada (ej. '¿Qué delegación necesita refuerzo de stock antes del cierre?')" style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-xs" onclick="setAiPrompt('Analiza el margen de beneficio neto frente a los objetivos anuales')">Margen neto y objetivos</button>
+          <button class="btn-xs" onclick="setAiPrompt('¿Cuál es la causa de los retrasos en la delegación Sur?')">Retrasos delegación Sur</button>
+          <button class="btn-xs" onclick="setAiPrompt('Recomendaciones de reducción de huella de carbono y costes ESG')">Sostenibilidad ESG</button>
+        </div>
+      </div>
+
+      <div id="aiOutputDisplay" class="ai-output-content">
+        Pulsa "Generar Análisis Ahora" para obtener un informe ejecutivo automático basado en los KPIs y tu rol en la organización.
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 3: MÓDULOS ACTIVOS (8) -->
+  <div id="tab-modules" class="dash-view">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-size:20px;">Control de Módulos Empresariales</h2>
+      <p style="color:var(--text-dim); font-size:13px;">Activa o desactiva las áreas funcionales del panel según las necesidades de tu empresa.</p>
+    </div>
+
+    <div class="module-cards-grid" id="modulesContainer">
+      <!-- Dynamically filled with switches -->
+    </div>
+  </div>
+
+  <!-- PESTAÑA 4: IMPORTADOR EXCEL -->
+  <div id="tab-excel" class="dash-view">
+    <div class="module-toggle-card" style="max-width:700px; margin:0 auto;">
+      <div class="auth-header">
+        <span class="role-badge-tag user">Sincronizador Directo</span>
+        <h2 style="font-size:22px; margin:10px 0;">Cargar Hoja de Cálculo Excel (.xlsx, .csv)</h2>
+        <p style="font-size:13px;">Sube tus tablas de ventas, operaciones o stock para recalcular las métricas del Centro de Mando automáticamente.</p>
+      </div>
+
+      <div id="excelDropArea" style="border:2px dashed var(--panel-border-strong); border-radius:10px; padding:36px 20px; text-align:center; background:rgba(255,255,255,0.01); cursor:pointer; margin-bottom:20px;" onclick="triggerFileSelect()">
+        <div style="font-size:36px; margin-bottom:10px;">📊</div>
+        <div style="font-family:var(--font-mono); font-size:14px; color:var(--text); font-weight:600;">Haz clic o arrastra tu archivo Excel aquí</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">Compatible con libros de trabajo estándar, plantillas de ventas y registros ERP</div>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelected(this)">
+      </div>
+
+      <div id="excelSelectedFile" style="display:none; padding:12px 14px; background:rgba(62,224,138,0.08); border:1px solid rgba(62,224,138,0.3); border-radius:8px; margin-bottom:18px; font-family:var(--font-mono); font-size:12px; color:var(--green);">
+        Archivo seleccionado: <span id="excelFileName">datos_ventas_2026.xlsx</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div class="form-group">
+          <label>Delegación Destino</label>
+          <select id="excelDeptSelect" class="form-select">
+            <option value="Todas">Todas las Delegaciones</option>
+            <option value="Norte">Delegación Norte</option>
+            <option value="Centro">Delegación Centro</option>
+            <option value="Este">Delegación Este</option>
+            <option value="Sur">Delegación Sur</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Modo de Sincronización</label>
+          <select class="form-select" id="excelModeSelect">
+            <option value="recalculate">Recálculo instantáneo con IA</option>
+            <option value="append">Anexar a datos históricos</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="processExcelUpload()" id="btnProcessExcel">
+        <span>Sincronizar y Recalcular Métricas</span>
+        <span>→</span>
+      </button>
+
+      <div id="excelFeedback" class="form-feedback" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 5: POWER BI EMBEBIDO -->
+  <div id="tab-powerbi" class="dash-view">
+    <div class="module-toggle-card">
+      <div class="module-card-header">
+        <div>
+          <h3>Informe Embebido Power BI / DAX Analytics</h3>
+          <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Visualización conectada con el servicio publicado en la nube.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-xs" onclick="alert('Dataset sincronizado con la nube de Power BI')">🔄 Refrescar Dataset</button>
+          <span class="role-badge-tag admin">En Vivo</span>
+        </div>
+      </div>
+
+      <!-- Simulación interactiva de cuadro Power BI con gráficos vectoriales -->
+      <div style="background:#060a0e; border:1px solid var(--panel-border); border-radius:8px; padding:20px; margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div style="font-family:var(--font-mono); font-size:12px; color:var(--green);">POWER BI SERVICE · DATASET ID: #PBI-992-ES</div>
+          <div style="display:flex; gap:6px;">
+            <select class="form-select" style="padding:4px 8px; font-size:11px;" onchange="updatePbiFilter(this.value)">
+              <option value="all">Todas las Regiones</option>
+              <option value="norte">Región Norte (€890K)</option>
+              <option value="centro">Región Centro (€1.12M)</option>
+              <option value="este">Región Este (€435K)</option>
+              <option value="sur">Región Sur (€402K)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:6px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase;">Facturación por Canal</div>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>B2B / Corporativo</span>
+                  <span>68% (€1.93M)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:68%;"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>Canal Digital / Web</span>
+                  <span>22% (€626K)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:22%; background:var(--blue);"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>Distribuidores</span>
+                  <span>10% (€284K)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:10%; background:var(--amber);"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:6px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase;">Métricas de Clima y NPS</div>
+            <div style="margin-top:14px; text-align:center;">
+              <div style="font-family:var(--font-mono); font-size:32px; font-weight:700; color:var(--green);">+74 NPS</div>
+              <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Nivel Excelente en el sector de distribución</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 6: GESTIÓN DE USUARIOS Y ROLES (ADMINISTRADOR) -->
+  <div id="tab-admin-panel" class="dash-view">
+    <!-- Restricción visual si es rol usuario -->
+    <div id="adminRestrictedWarning" style="display:none; padding:24px; background:rgba(232,193,90,0.1); border:1px solid var(--amber); border-radius:10px; margin-bottom:20px; text-align:center;">
+      <div style="font-size:24px; margin-bottom:6px;">🛡️</div>
+      <h3 style="color:var(--amber); margin-bottom:4px;">Sección Exclusiva para Administradores</h3>
+      <p style="font-size:13px; color:var(--text-dim);">Tu rol actual es <strong>Usuario / Operativo</strong>. Como usuario estándar solo puedes ver y modificar tus métricas asignadas. Para administrar roles y crear usuarios, accede con credenciales de Administrador.</p>
+      <button class="btn btn-primary" onclick="quickLoginAdmin()" style="margin-top:12px; font-size:11px;">Entrar como Admin (admin@centrodemando.ia)</button>
+    </div>
+
+    <div id="adminContentContainer">
+      <!-- Estadísticas de la organización -->
+      <div class="user-stat-grid">
+        <div class="user-stat-card">
+          <div class="lbl">Total Usuarios</div>
+          <div class="val" id="statTotalUsers">3</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Usuarios Activos</div>
+          <div class="val" style="color:var(--green);" id="statActiveUsers">3</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Administradores</div>
+          <div class="val" style="color:var(--amber);" id="statAdminUsers">1</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Usuarios Estándar</div>
+          <div class="val" id="statStandardUsers">2</div>
+        </div>
+      </div>
+
+      <!-- Barra de herramientas de administración -->
+      <div class="admin-toolbar">
+        <div>
+          <h2 style="font-size:18px;">Directorio de Usuarios y Roles</h2>
+          <p style="font-size:12px; color:var(--text-dim);">Gestiona permisos, asigna roles de Administrador/Usuario y audita accesos.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateUserModal()" style="font-size:12px; padding:8px 16px;">
+          <span>+ Crear Nuevo Usuario</span>
+        </button>
+      </div>
+
+      <!-- Tabla de Usuarios -->
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Usuario &amp; Email</th>
+              <th>Rol Actual</th>
+              <th>Empresa &amp; Departamento</th>
+              <th>Estado</th>
+              <th>Último Acceso</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Dynamically populated via loadAdminUsers() -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Registro de Auditoría (Audit Logs) en Vivo -->
+      <div style="margin-top:32px;">
+        <div class="module-card-header">
+          <div>
+            <h3 style="font-size:16px;">Registro de Auditoría y Seguridad en Tiempo Real</h3>
+            <p style="font-size:11px; color:var(--text-dim);">Trazabilidad inmutable de inicios de sesión, cambios de roles y modificaciones.</p>
+          </div>
+          <button class="btn-xs" onclick="loadAuditLogs()">🔄 Actualizar Logs</button>
+        </div>
+        <div class="audit-log-list" id="auditLogsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA: SUSCRIPCIÓN & FACTURACIÓN MENSUAL -->
+  <div id="tab-subscription" class="dash-view">
+    <!-- Hero Status Card -->
+    <div class="sub-hero-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+            <span id="subStatusBadge" class="sub-badge active">● ACTIVA</span>
+            <span class="role-badge-tag user" id="subCycleTag">Ciclo Mensual Sin Permanencia</span>
+          </div>
+          <h2 style="font-size:24px; margin:4px 0 6px;" id="subPlanTitle">Plan Business / Pro Mensual</h2>
+          <p style="font-size:13px; color:var(--text-dim); margin:0;" id="subPlanDesc">
+            Acceso completo al Centro de Mando IA, KPIs en vivo, importación de Excel, Power BI y Asistente Ejecutivo.
+          </p>
+        </div>
+
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em;">Cuota Mensual</div>
+          <div id="subPlanPriceDisplay" style="font-family:var(--font-mono); font-size:30px; font-weight:700; color:var(--green); margin:2px 0;">
+            €129<span style="font-size:14px; color:var(--text-dim); font-weight:400;">/mes</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-faint);" id="subVatNote">+21% IVA (€156.09 total)</div>
+        </div>
+      </div>
+
+      <!-- Barra de progreso del periodo mensual -->
+      <div style="margin-top:20px; background:rgba(0,0,0,0.3); border:1px solid var(--panel-border); border-radius:8px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+          <div>
+            <span style="color:var(--text-dim);">Tiempo de acceso restante:</span>
+            <strong id="subDaysLeftVal" style="font-family:var(--font-mono); font-size:18px; color:var(--green); margin-left:6px;">18 días</strong>
+          </div>
+          <div style="font-family:var(--font-mono); font-size:12px; color:var(--text-dim);" id="subNextBillingDate">
+            Vence el 25/08/2026
+          </div>
+        </div>
+
+        <div class="sub-progress-bar-container">
+          <div id="subProgressBarFill" class="sub-progress-bar-fill" style="width:60%;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); font-family:var(--font-mono);">
+          <span id="subCycleStartText">Inicio ciclo: 12/08/2026</span>
+          <span id="subCycleRemainingText">18 días de acceso restantes</span>
+        </div>
+      </div>
+
+      <!-- Acciones de suscripción -->
+      <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-primary" onclick="quickRenewSubscription()" style="padding:10px 18px; font-size:12px;" id="btnQuickRenew">
+          <span>⚡ Renovar +30 Días (Pago Inmediato)</span>
+        </button>
+        <button class="btn btn-ghost" onclick="openCheckoutModal('pro')" style="padding:10px 16px; font-size:12px;">
+          <span>🔄 Cambiar Plan o Tarjeta</span>
+        </button>
+        <button class="btn btn-ghost" onclick="toggleAutoRenew()" style="padding:10px 16px; font-size:12px;" id="btnAutoRenewToggle">
+          <span id="autoRenewStatusLabel">🔁 Auto-renovación: Activada</span>
+        </button>
+        <button class="btn btn-ghost" onclick="simulateExpirationTest()" style="padding:10px 14px; font-size:11px; border-color:var(--amber); color:var(--amber);" title="Simula que el periodo de 30 días ha concluido para probar el bloqueo y pago">
+          <span>🧪 Simular Expiración (Probar Bloqueo)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Comparativa y Selección de Planes Mensuales -->
+    <div style="margin-bottom:28px;">
+      <div class="section-head" style="margin-bottom:16px;">
+        <div class="eyebrow" style="font-size:10px;">Planes de Acceso</div>
+        <h3 style="font-size:20px; margin:4px 0;">Planes de Suscripción Mensual Disponibles</h3>
+        <p style="font-size:13px; color:var(--text-dim);">Elige el plan que mejor se adapte al volumen y necesidades operativas de tu empresa.</p>
+      </div>
+
+      <div class="sub-plan-selection-grid">
+        <!-- Plan Starter -->
+        <div class="sub-plan-card" id="cardPlanStarter">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <span class="eyebrow" style="font-size:10px;">Starter</span>
+              <span class="role-badge-tag user">Básico</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--text); margin:8px 0 4px;">
+              €49<span style="font-size:12px; color:var(--text-dim); font-weight:400;">/mes</span>
+            </div>
+            <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">Ideal para una sola tienda o delegación pequeña.</p>
+            <ul style="font-size:12px; color:var(--text-dim); line-height:1.7; padding-left:18px; margin:0 0 16px;">
+              <li>Hasta 4 módulos activos</li>
+              <li>Sincronizador Excel manual</li>
+              <li>1 usuario operativo</li>
+              <li>Actualización diaria de KPIs</li>
+            </ul>
+          </div>
+          <button class="btn btn-ghost btn-block" onclick="openCheckoutModal('starter')" style="font-size:12px;">
+            <span>Contratar Starter (49€/mes)</span>
+          </button>
+        </div>
+
+        <!-- Plan Business / Pro (Destacado) -->
+        <div class="sub-plan-card active-plan featured-plan" id="cardPlanPro">
+          <div class="sub-featured-tag">Más Elegido</div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <span class="eyebrow" style="font-size:10px; color:var(--green);">Business / Pro</span>
+              <span class="role-badge-tag admin">Recomendado</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--green); margin:8px 0 4px;">
+              €129<span style="font-size:12px; color:var(--text-dim); font-weight:400;">/mes</span>
+            </div>
+            <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">Para empresas con varias tiendas, delegaciones o departamentos.</p>
+            <ul style="font-size:12px; color:var(--text-dim); line-height:1.7; padding-left:18px; margin:0 0 16px;">
+              <li><strong>Todos los 8 módulos</strong> activos</li>
+              <li>Sincronización Excel + Conector Power BI</li>
+              <li>Hasta 10 usuarios con roles</li>
+              <li><strong>Asistente Ejecutivo IA (Gemini 3.6)</strong></li>
+              <li>Soporte prioritario 24/7</li>
+            </ul>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="openCheckoutModal('pro')" style="font-size:12px;">
+            <span>Mantener / Activar Pro (129€/mes)</span>
+          </button>
+        </div>
+
+        <!-- Plan Enterprise -->
+        <div class="sub-plan-card" id="cardPlanEnterprise">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <span class="eyebrow" style="font-size:10px;">Enterprise</span>
+              <span class="role-badge-tag admin">Corporativo</span>
+            </div>
+            <div style="font-family:var(--font-mono); font-size:24px; font-weight:700; color:var(--text); margin:8px 0 4px;">
+              €299<span style="font-size:12px; color:var(--text-dim); font-weight:400;">/mes</span>
+            </div>
+            <p style="font-size:12px; color:var(--text-dim); margin-bottom:14px;">Para cadenas y grupos con necesidades avanzadas de integración.</p>
+            <ul style="font-size:12px; color:var(--text-dim); line-height:1.7; padding-left:18px; margin:0 0 16px;">
+              <li>Usuarios y delegaciones ilimitadas</li>
+              <li>Conectores ERP/CRM a medida (SAP, Navision)</li>
+              <li>Multiempresa y auditoría total</li>
+              <li>Gestor de cuenta y SLA del 99.9%</li>
+            </ul>
+          </div>
+          <button class="btn btn-ghost btn-block" onclick="openCheckoutModal('enterprise')" style="font-size:12px;">
+            <span>Contratar Enterprise (299€/mes)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid de Método de Pago y Facturación Fiscal -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; margin-bottom:28px;">
+      <!-- Método de Pago Guardado -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <div>
+            <h3>Método de Pago Asociado</h3>
+            <span style="font-size:11px; color:var(--text-dim);">Cobro mensual recurrente seguro</span>
+          </div>
+          <span class="role-badge-tag user">Seguro SSL</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:16px; margin:16px 0; padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--panel-border); border-radius:8px;">
+          <div style="font-size:32px;" id="cardBrandIcon">💳</div>
+          <div style="flex:1;">
+            <div style="font-family:var(--font-mono); font-size:14px; font-weight:600; color:var(--text);" id="cardMaskedDisplay">
+              Visa terminada en •••• 4242
+            </div>
+            <div style="font-size:11px; color:var(--text-dim);" id="cardExpiryDisplay">
+              Caduca: 12/2028 · Titular: Gonzalo Rosendo
+            </div>
+          </div>
+          <span class="badge-status activo">Válida</span>
+        </div>
+
+        <button class="btn btn-ghost btn-block" onclick="openCheckoutModal(currentUser && currentUser.subscription && currentUser.subscription.plan || 'pro')" style="font-size:11px;">
+          <span>Actualizar Datos de Pago</span>
+        </button>
+      </div>
+
+      <!-- Datos Fiscales del Cliente -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <div>
+            <h3>Datos de Facturación Fiscal</h3>
+            <span style="font-size:11px; color:var(--text-dim);">Emitidas con 21% de IVA desglosado</span>
+          </div>
+          <span class="role-badge-tag admin">RGPD</span>
+        </div>
+
+        <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin:12px 0;">
+          <div><strong>Empresa:</strong> <span id="fiscalCompany">Distribuciones Ibéricas S.L.</span></div>
+          <div><strong>CIF / NIF:</strong> <span id="fiscalCif">B-88349210</span></div>
+          <div><strong>Dirección:</strong> <span>Paseo de la Castellana 216, 28046 Madrid</span></div>
+          <div><strong>Email de facturación:</strong> <span id="fiscalEmail">facturacion@empresa.com</span></div>
+        </div>
+
+        <div style="font-size:11px; color:var(--text-faint);">
+          Las facturas se generan automáticamente en cada cobro mensual y están disponibles en formato oficial descargable.
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial de Facturas Mensuales -->
+    <div class="module-toggle-card">
+      <div class="module-card-header">
+        <div>
+          <h3>Historial de Facturas Mensuales</h3>
+          <span style="font-size:11px; color:var(--text-dim);">Comprobantes de pago oficiales y deducibles</span>
+        </div>
+        <button class="btn-xs" onclick="loadSubscriptionData()" title="Refrescar lista de facturas">Actualizar</button>
+      </div>
+
+      <div class="table-responsive" style="margin-top:14px;">
+        <table style="width:100%; border-collapse:collapse; min-width:600px;">
+          <thead>
+            <tr style="text-align:left; border-bottom:1px solid var(--panel-border);">
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Nº Factura</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Fecha</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Plan Mensual</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Base</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">IVA (21%)</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Total</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase;">Estado</th>
+              <th style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text-dim); text-transform:uppercase; text-align:right;">Comprobante</th>
+            </tr>
+          </thead>
+          <tbody id="invoicesTableBody">
+            <!-- Dynamically populated invoices -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 7: MI PERFIL & SEGURIDAD -->
+  <div id="tab-profile" class="dash-view">
+    <div class="module-toggle-card" style="max-width:600px; margin:0 auto;">
+      <div class="auth-header">
+        <span class="role-badge-tag user">Mi Cuenta</span>
+        <h2 style="font-size:22px; margin:8px 0;">Configuración de Perfil</h2>
+        <p style="font-size:13px;">Actualiza tus datos de contacto y contraseña de acceso.</p>
+      </div>
+
+      <div id="profileAlert" class="form-feedback"></div>
+
+      <form id="profileForm">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="profName" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label>Correo Electrónico (No modificable)</label>
+          <input type="email" id="profEmail" class="form-input" disabled style="opacity:0.6; cursor:not-allowed;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label>Empresa</label>
+            <input type="text" id="profCompany" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Departamento</label>
+            <input type="text" id="profDepartment" class="form-input">
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--panel-border); margin:20px 0 16px; padding-top:16px;">
+          <div style="font-family:var(--font-mono); font-size:11px; color:var(--green); text-transform:uppercase; margin-bottom:12px;">
+            Cambiar Contraseña (Opcional)
+          </div>
+          <div class="form-group">
+            <label>Contraseña Actual</label>
+            <input type="password" id="profCurrentPass" class="form-input" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label>Nueva Contraseña (mínimo 6 caracteres)</label>
+            <input type="password" id="profNewPass" class="form-input" placeholder="••••••••" minlength="6">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btnSaveProfile">
+          Guardar Cambios de Perfil
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- PAYWALL / OVERLAY DE SUSCRIPCIÓN EXPIRADA -->
+<div id="paywallOverlay" class="paywall-overlay">
+  <div class="paywall-card">
+    <div class="paywall-lock-icon">🔒</div>
+    <div style="text-align:center; margin-bottom:20px;">
+      <span class="sub-badge expired" style="margin-bottom:8px;">● ACCESO SUSPENDIDO POR TIEMPO</span>
+      <h2 style="font-size:24px; margin:8px 0 6px;">Tu Suscripción Mensual ha Expirado</h2>
+      <p style="font-size:13px; color:var(--text-dim); line-height:1.6; margin:0 auto; max-width:480px;">
+        El periodo de 30 días de acceso para tu cuenta ha concluido. Para continuar visualizando métricas en tiempo real, importando hojas Excel y consultando al Asistente Ejecutivo IA, renueva tu cuota mensual.
+      </p>
+    </div>
+
+    <div id="paywallAlert" class="form-feedback"></div>
+
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--panel-border); border-radius:10px; padding:18px; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <strong id="paywallPlanTitle" style="font-size:15px; color:var(--text);">Plan Business / Pro Mensual</strong>
+          <div style="font-size:11px; color:var(--text-dim);">Renovación por 30 días adicionales de acceso</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--green);" id="paywallPlanPrice">€129</span>
+          <span style="font-size:11px; color:var(--text-dim);">+IVA</span>
+        </div>
+      </div>
+
+      <div style="font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+        <span>💳 Pago seguro mediante tarjeta corporativa</span> ·
+        <span style="color:var(--green);">Desbloqueo instantáneo</span>
+      </div>
+    </div>
+
+    <!-- Quick action buttons -->
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary btn-block" onclick="executePaywallRenewal()" id="btnPaywallInstant" style="padding:14px; font-size:13px;">
+        <span>⚡ Renovar Ahora por 30 Días (€156.09 IVA incl.)</span>
+        <span>→</span>
+      </button>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <button class="btn btn-ghost" onclick="openCheckoutModal('starter')" style="font-size:11px; padding:10px;">
+          <span>Cambiar a Starter (€49/mes)</span>
+        </button>
+        <button class="btn btn-ghost" onclick="openCheckoutModal('enterprise')" style="font-size:11px; padding:10px;">
+          <span>Plan Enterprise (€299/mes)</span>
+        </button>
+      </div>
+
+      <button class="btn btn-ghost" onclick="handleLogout()" style="margin-top:6px; font-size:11px; color:var(--text-faint); border:none;">
+        Cerrar sesión e ingresar con otra cuenta
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE CHECKOUT / RENOVACIÓN / CAMBIO DE PLAN -->
+<div id="checkoutModal" class="modal-backdrop">
+  <div class="modal-content" style="max-width:540px;">
+    <div class="modal-header">
+      <div>
+        <span class="role-badge-tag admin" style="font-size:9px;">Pago Seguro 256-bit</span>
+        <h3 style="font-size:18px; font-family:var(--font-display); margin-top:4px;" id="checkoutModalTitle">Contratar Suscripción Mensual</h3>
+      </div>
+      <button class="modal-close" onclick="closeCheckoutModal()">✕</button>
+    </div>
+
+    <div id="checkoutAlert" class="form-feedback"></div>
+
+    <form id="checkoutForm">
+      <!-- Selector de Plan en Modal -->
+      <div class="form-group">
+        <label>Plan Mensual Seleccionado *</label>
+        <select id="checkoutPlanSelect" class="form-select" onchange="updateCheckoutPriceDisplay(this.value)">
+          <option value="starter">Plan Starter Mensual — €49/mes (+IVA)</option>
+          <option value="pro" selected>Plan Business / Pro Mensual — €129/mes (+IVA) [Recomendado]</option>
+          <option value="enterprise">Plan Enterprise Mensual — €299/mes (+IVA)</option>
+        </select>
+      </div>
+
+      <!-- Resumen de Coste -->
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--panel-border); border-radius:8px; padding:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>Base imponible mensual:</span>
+          <strong id="chkBasePrice">€129.00</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span>IVA (21%):</span>
+          <strong id="chkVatAmount">€27.09</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700; border-top:1px solid var(--panel-border); padding-top:6px; margin-top:6px; color:var(--green);">
+          <span>Total a facturar (+30 días de acceso):</span>
+          <span id="chkTotalPrice">€156.09</span>
+        </div>
+      </div>
+
+      <!-- Datos de Tarjeta -->
+      <div class="form-group">
+        <label>Nombre del Titular en la Tarjeta *</label>
+        <input type="text" id="chkCardHolder" class="form-input" placeholder="Ej. Gonzalo Rosendo" required>
+      </div>
+
+      <div class="form-group">
+        <label>Número de Tarjeta Corporativa *</label>
+        <input type="text" id="chkCardNumber" class="form-input" placeholder="4242 4242 4242 4242" maxlength="19" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Caducidad (MM/AA) *</label>
+          <input type="text" id="chkCardExp" class="form-input" placeholder="12/28" maxlength="5" required>
+        </div>
+        <div class="form-group">
+          <label>CVV / CVC *</label>
+          <input type="password" id="chkCardCvv" class="form-input" placeholder="123" maxlength="4" required>
+        </div>
+      </div>
+
+      <div style="margin:12px 0; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="chkAutoRenew" checked>
+        <label for="chkAutoRenew" style="font-size:12px; color:var(--text-dim); cursor:pointer;">
+          Renovar automáticamente cada 30 días para no perder el acceso a los datos
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="btnSubmitCheckout" style="margin-top:14px;">
+        <span id="btnCheckoutLabel">Completar Pago y Ampliar 30 Días</span>
+        <span>→</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL DE VISUALIZACIÓN DE FACTURA OFICIAL -->
+<div id="invoiceModal" class="modal-backdrop">
+  <div class="modal-content" style="max-width:720px; background:#0e171b;">
+    <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1);">
+      <div>
+        <h3 style="font-size:17px; font-family:var(--font-display);">Factura Oficial Deducible</h3>
+        <span style="font-size:11px; color:var(--green); font-family:var(--font-mono);" id="invHeaderId">FAC-2026-0089</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="printInvoiceDocument()" style="font-size:11px; padding:6px 12px;">
+          <span>🖨️ Imprimir / Guardar PDF</span>
+        </button>
+        <button class="modal-close" onclick="closeInvoiceModal()">✕</button>
+      </div>
+    </div>
+
+    <!-- Paper View for Invoice -->
+    <div class="invoice-paper" id="invoicePrintArea" style="margin-top:14px;">
+      <div class="invoice-header-row">
+        <div>
+          <div style="font-family:var(--font-display); font-weight:700; font-size:18px; color:#111827;">Centro de Mando IA</div>
+          <div style="font-size:11px; color:#4b5563; line-height:1.5; margin-top:4px;">
+            Gonzalo Rosendo · Data &amp; Formation S.L.<br>
+            CIF: ES-B88349210<br>
+            Paseo de la Castellana 216, 28046 Madrid, España<br>
+            facturacion@centrodemando.ia
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:var(--font-mono); font-size:18px; font-weight:700; color:#111827;" id="invDocNumber">FAC-2026-0089</div>
+          <div style="font-size:11px; color:#6b7280; margin-top:4px;">Fecha: <span id="invDocDate">12/08/2026</span></div>
+          <div style="display:inline-block; background:#dcfce7; color:#166534; font-family:var(--font-mono); font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; margin-top:6px;">
+            PAGADA / CARGO CONFIRMADO
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos del Cliente -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; font-size:12px; background:#f9fafb; padding:14px; border-radius:6px; border:1px solid #e5e7eb;">
+        <div>
+          <strong style="color:#374151; text-transform:uppercase; font-size:10px;">Cliente Facturado:</strong>
+          <div id="invClientCompany" style="font-weight:600; color:#111827; margin-top:2px;">Distribuciones Ibéricas S.L.</div>
+          <div id="invClientName" style="color:#4b5563;">Gonzalo Rosendo</div>
+          <div id="invClientEmail" style="color:#6b7280;">admin@centrodemando.ia</div>
+        </div>
+        <div>
+          <strong style="color:#374151; text-transform:uppercase; font-size:10px;">Detalles de la Operación:</strong>
+          <div style="color:#4b5563; margin-top:2px;">Periodo: 30 Días de Acceso Corporativo</div>
+          <div style="color:#4b5563;">Método: <span id="invDocPaymentMethod">Tarjeta Visa •••• 4242</span></div>
+          <div style="color:#4b5563;">Moneda: EUR (€)</div>
+        </div>
+      </div>
+
+      <!-- Tabla de Líneas -->
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>Concepto / Servicio</th>
+            <th>Periodo</th>
+            <th>Base Imponible</th>
+            <th>IVA</th>
+            <th style="text-align:right;">Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong id="invLinePlan">Plan Business / Pro Mensual</strong>
+              <div style="font-size:11px; color:#6b7280;">Suscripción mensual al Centro de Mando IA (Acceso completo a KPIs, Excel, Power BI y Gemini IA).</div>
+            </td>
+            <td style="font-size:12px;">30 días</td>
+            <td id="invLineBase" style="font-family:var(--font-mono);">€129.00</td>
+            <td>21%</td>
+            <td id="invLineTotal" style="font-family:var(--font-mono); text-align:right; font-weight:600;">€129.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Totales -->
+      <div class="invoice-total-box">
+        <div>Subtotal (Base Imponible): <strong id="invSubtotalBox">€129.00</strong></div>
+        <div>IVA Régimen General (21%): <strong id="invVatBox">€27.09</strong></div>
+        <div style="font-size:16px; font-weight:700; color:#111827; border-top:2px solid #111827; padding-top:6px; margin-top:4px;">
+          Total Factura: <span id="invTotalBox">€156.09</span>
+        </div>
+      </div>
+
+      <div style="font-size:10px; color:#9ca3af; margin-top:28px; border-top:1px solid #e5e7eb; padding-top:12px; text-align:center;">
+        Factura emitida conforme al Real Decreto 1619/2012 por el que se aprueba el Reglamento por el que se regulan las obligaciones de facturación.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PARA QUE ADMIN MODIFIQUE LA SUSCRIPCIÓN DE CUALQUIER USUARIO -->
+<div id="adminSubModal" class="modal-backdrop">
+  <div class="modal-content" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 style="font-size:17px; font-family:var(--font-display);">Ajustar Suscripción de Usuario</h3>
+      <button class="modal-close" onclick="closeAdminSubModal()">✕</button>
+    </div>
+
+    <div id="adminSubAlert" class="form-feedback"></div>
+
+    <form id="adminSubForm">
+      <input type="hidden" id="adminSubUserId">
+
+      <div class="form-group">
+        <label>Usuario a Gestionar</label>
+        <input type="text" id="adminSubUserName" class="form-input" disabled style="opacity:0.7;">
+      </div>
+
+      <div class="form-group">
+        <label>Plan de Suscripción</label>
+        <select id="adminSubPlan" class="form-select">
+          <option value="starter">Plan Starter Mensual (49€/mes)</option>
+          <option value="pro">Plan Business / Pro Mensual (129€/mes)</option>
+          <option value="enterprise">Plan Enterprise Mensual (299€/mes)</option>
+          <option value="trial">Prueba Inicial (14 días)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Estado del Acceso</label>
+        <select id="adminSubStatus" class="form-select">
+          <option value="active">Activo (Acceso Completo)</option>
+          <option value="trial">Periodo de Prueba</option>
+          <option value="expired">Expirado (Requiere Pago)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Añadir Días de Acceso Extra</label>
+        <select id="adminSubAddDays" class="form-select">
+          <option value="0">Sin cambios de fecha</option>
+          <option value="30" selected>+30 Días (1 Mes Completo)</option>
+          <option value="60">+60 Días (2 Meses)</option>
+          <option value="90">+90 Días (Trimestre)</option>
+          <option value="365">+365 Días (1 Año Corporativo)</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:12px;">
+        Guardar Cambios de Suscripción
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL PARA CREAR / EDITAR USUARIO (ADMIN) -->
+<div id="userModal" class="modal-backdrop">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="font-size:17px; font-family:var(--font-display);" id="userModalTitle">Crear Nuevo Usuario</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+
+    <div id="modalAlert" class="form-feedback"></div>
+
+    <form id="modalUserForm">
+      <div class="form-group">
+        <label>Nombre Completo *</label>
+        <input type="text" id="modalName" class="form-input" required>
+      </div>
+
+      <div class="form-group">
+        <label>Correo Electrónico *</label>
+        <input type="email" id="modalEmail" class="form-input" required>
+      </div>
+
+      <div class="form-group" id="modalPasswordGroup">
+        <label>Contraseña Inicial *</label>
+        <input type="password" id="modalPassword" class="form-input" minlength="6" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Rol en el Sistema *</label>
+          <select id="modalRole" class="form-select">
+            <option value="user" selected>👤 Usuario / Operativo</option>
+            <option value="admin">🛡️ Administrador</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Estado de la Cuenta *</label>
+          <select id="modalStatus" class="form-select">
+            <option value="activo" selected>Activo (Permitir acceso)</option>
+            <option value="suspendido">Suspendido (Bloquear)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Empresa</label>
+          <input type="text" id="modalCompany" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Departamento</label>
+          <input type="text" id="modalDepartment" class="form-input">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="btnSaveUserModal" style="margin-top:10px;">
+        Crear Usuario
+      </button>
+    </form>
+  </div>
+</div>
+
+<footer class="site">
+  <div class="container foot-btm">
+    <div class="copy">Centro de Mando IA · Control de Acceso por Roles y Seguridad RGPD · Alojado en la UE</div>
+    <div class="foot-links">
+      <a href="index.html">Web Pública</a>
+      <a href="precios.html">Planes</a>
+      <a href="contacto.html">Soporte</a>
+    </div>
+  </div>
+</footer>
+
+<!-- SCRIPT DEL PANEL DE CONTROL -->
+<script>
+let currentUser = null;
+let currentToken = null;
+let dashboardMetrics = null;
+
+// Initialization
+window.addEventListener('DOMContentLoaded', async () => {
+  currentToken = localStorage.getItem('cma_token');
+  const storedUser = localStorage.getItem('cma_user');
+
+  if (!currentToken || !storedUser) {
+    // Check if we can auto-login as admin demo for smooth preview
+    await quickLoginAdmin();
+    return;
+  }
+
+  try {
+    currentUser = JSON.parse(storedUser);
+    updateUserInterface(currentUser);
+    await loadDashboardData();
+  } catch (e) {
+    await quickLoginAdmin();
+  }
+});
+
+// Update UI with Current User Details
+function updateUserInterface(user) {
+  if (!user) return;
+  currentUser = user;
+
+  document.getElementById('userNameDisplay').textContent = user.name;
+  document.getElementById('userCompanyDisplay').textContent = user.company || 'Empresa';
+  document.getElementById('userDepartmentDisplay').textContent = user.department || 'General';
+  document.getElementById('headerUserGreeting').textContent = `${user.name} (${user.role.toUpperCase()})`;
+
+  const avatar = document.getElementById('userAvatar');
+  const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  avatar.textContent = initials || 'US';
+
+  const roleBadge = document.getElementById('userRoleBadge');
+  const adminTabBtn = document.getElementById('adminTabBtn');
+  const roleToggleLabel = document.getElementById('roleToggleLabel');
+  const aiRoleLabel = document.getElementById('aiRoleLabel');
+
+  if (user.role === 'admin') {
+    roleBadge.textContent = 'ADMINISTRADOR';
+    roleBadge.className = 'role-badge-tag admin';
+    adminTabBtn.style.display = 'flex';
+    document.getElementById('adminRestrictedWarning').style.display = 'none';
+    document.getElementById('adminContentContainer').style.display = 'block';
+    roleToggleLabel.textContent = '⚡ Probar como Usuario';
+    aiRoleLabel.textContent = 'Alta Dirección / Admin';
+  } else {
+    roleBadge.textContent = 'USUARIO OPERATIVO';
+    roleBadge.className = 'role-badge-tag user';
+    document.getElementById('adminRestrictedWarning').style.display = 'block';
+    document.getElementById('adminContentContainer').style.display = 'none';
+    roleToggleLabel.textContent = '⚡ Probar como Admin';
+    aiRoleLabel.textContent = user.department || 'Área Operativa';
+  }
+
+  // Populate profile form
+  document.getElementById('profName').value = user.name;
+  document.getElementById('profEmail').value = user.email;
+  document.getElementById('profCompany').value = user.company || '';
+  document.getElementById('profDepartment').value = user.department || '';
+
+  // Update subscription countdown in topbar and hero
+  if (user.subscription) {
+    updateSubscriptionUI(user.subscription, user.invoices || []);
+  }
+}
+
+// Update Subscription UI Elements (Topbar, Hero Card, Invoices)
+function updateSubscriptionUI(sub, invoices = []) {
+  if (!sub) return;
+
+  const topBadge = document.getElementById('topSubscriptionBadge');
+  const topText = document.getElementById('topSubStatusText');
+  const subStatusBadge = document.getElementById('subStatusBadge');
+  const subPlanTitle = document.getElementById('subPlanTitle');
+  const subPlanPriceDisplay = document.getElementById('subPlanPriceDisplay');
+  const subDaysLeftVal = document.getElementById('subDaysLeftVal');
+  const subNextBillingDate = document.getElementById('subNextBillingDate');
+  const subProgressBarFill = document.getElementById('subProgressBarFill');
+  const subCycleStartText = document.getElementById('subCycleStartText');
+  const subCycleRemainingText = document.getElementById('subCycleRemainingText');
+  const autoRenewStatusLabel = document.getElementById('autoRenewStatusLabel');
+  const cardMaskedDisplay = document.getElementById('cardMaskedDisplay');
+  const cardExpiryDisplay = document.getElementById('cardExpiryDisplay');
+  const fiscalCompany = document.getElementById('fiscalCompany');
+  const fiscalEmail = document.getElementById('fiscalEmail');
+
+  const daysLeft = typeof sub.daysRemaining === 'number' ? sub.daysRemaining : 30;
+  const isExp = Boolean(sub.isExpired);
+  const endFormatted = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString('es-ES') : '28/08/2026';
+  const startFormatted = sub.startDate ? new Date(sub.startDate).toLocaleDateString('es-ES') : '28/07/2026';
+
+  // Top bar badge
+  if (topBadge && topText) {
+    topBadge.classList.remove('warning', 'danger');
+    if (isExp || daysLeft <= 0) {
+      topBadge.classList.add('danger');
+      topText.textContent = '🔒 Suscripción Expirada (0 días)';
+    } else if (daysLeft <= 5) {
+      topBadge.classList.add('warning');
+      topText.textContent = `⏳ Suscripción: ${daysLeft} días restantes (${endFormatted})`;
+    } else {
+      topText.textContent = `⏳ Suscripción: ${daysLeft} días restantes (${endFormatted})`;
+    }
+  }
+
+  // Hero Card
+  if (subStatusBadge) {
+    subStatusBadge.className = 'sub-badge ' + (isExp ? 'expired' : sub.status === 'trial' ? 'trial' : 'active');
+    subStatusBadge.textContent = isExp ? '● EXPIRADA' : sub.status === 'trial' ? '● EN PRUEBA' : '● ACTIVA';
+  }
+
+  if (subPlanTitle) subPlanTitle.textContent = sub.planName || 'Plan Business / Pro Mensual';
+  if (subPlanPriceDisplay) {
+    const price = sub.price || (sub.plan === 'starter' ? 49 : sub.plan === 'enterprise' ? 299 : 129);
+    subPlanPriceDisplay.innerHTML = `€${price}<span style="font-size:14px; color:var(--text-dim); font-weight:400;">/mes</span>`;
+    const totalWithVat = +(price * 1.21).toFixed(2);
+    const vatNote = document.getElementById('subVatNote');
+    if (vatNote) vatNote.textContent = `+21% IVA (€${totalWithVat} total)`;
+  }
+
+  if (subDaysLeftVal) {
+    subDaysLeftVal.textContent = isExp ? '0 días (Expirada)' : `${daysLeft} días`;
+    subDaysLeftVal.style.color = isExp ? 'var(--red)' : daysLeft <= 5 ? 'var(--amber)' : 'var(--green)';
+  }
+
+  if (subNextBillingDate) {
+    subNextBillingDate.textContent = `Vence el ${endFormatted}`;
+  }
+
+  if (subProgressBarFill) {
+    const pctElapsed = sub.percentElapsed || Math.min(100, Math.max(0, Math.round(((30 - daysLeft) / 30) * 100)));
+    const pctRemaining = 100 - pctElapsed;
+    subProgressBarFill.style.width = pctRemaining + '%';
+    subProgressBarFill.className = 'sub-progress-bar-fill ' + (pctRemaining <= 15 ? 'danger' : pctRemaining <= 35 ? 'warning' : '');
+  }
+
+  if (subCycleStartText) subCycleStartText.textContent = `Inicio ciclo: ${startFormatted}`;
+  if (subCycleRemainingText) subCycleRemainingText.textContent = isExp ? 'Periodo concluido' : `${daysLeft} días de acceso restantes`;
+
+  if (autoRenewStatusLabel) {
+    autoRenewStatusLabel.textContent = `🔁 Auto-renovación: ${sub.autoRenew !== false ? 'Activada' : 'Desactivada'}`;
+  }
+
+  // Payment method
+  if (sub.paymentMethod && cardMaskedDisplay) {
+    const pm = sub.paymentMethod;
+    cardMaskedDisplay.textContent = `${(pm.brand || 'Visa').toUpperCase()} terminada en •••• ${pm.last4 || '4242'}`;
+    if (cardExpiryDisplay) {
+      cardExpiryDisplay.textContent = `Caduca: ${pm.expMonth || '12'}/${pm.expYear || '2028'} · Titular: ${pm.holderName || currentUser.name}`;
+    }
+  }
+
+  // Fiscal details
+  if (fiscalCompany) fiscalCompany.textContent = currentUser.company || 'Distribuciones Ibéricas S.L.';
+  if (fiscalEmail) fiscalEmail.textContent = currentUser.email;
+
+  // Render invoices table
+  renderInvoicesTable(invoices);
+
+  // Gating & Paywall check
+  const paywall = document.getElementById('paywallOverlay');
+  if (currentUser.role !== 'admin' && (isExp || daysLeft <= 0)) {
+    if (paywall) paywall.classList.add('open');
+  } else {
+    if (paywall) paywall.classList.remove('open');
+  }
+}
+
+// Render Invoices Table
+function renderInvoicesTable(invoices) {
+  const tbody = document.getElementById('invoicesTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!invoices || invoices.length === 0) {
+    // Default invoice row
+    const defaultInv = {
+      id: 'FAC-2026-0042',
+      date: new Date().toISOString(),
+      plan: 'Plan Business / Pro Mensual',
+      subtotal: 129,
+      vatAmount: 27.09,
+      total: 156.09,
+      status: 'pagada',
+      paymentMethod: 'VISA •••• 4242'
+    };
+    invoices = [defaultInv];
+  }
+
+  invoices.forEach(inv => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--panel-border)';
+    tr.innerHTML = `
+      <td style="padding:12px; font-family:var(--font-mono); font-weight:600; color:var(--text);">
+        ${inv.id}
+      </td>
+      <td style="padding:12px; font-size:12px; color:var(--text-dim);">
+        ${new Date(inv.date).toLocaleDateString('es-ES')}
+      </td>
+      <td style="padding:12px; font-size:12px; font-weight:500;">
+        ${inv.plan || 'Plan Business / Pro'}
+      </td>
+      <td style="padding:12px; font-family:var(--font-mono); font-size:12px;">
+        €${(inv.subtotal || 129).toFixed(2)}
+      </td>
+      <td style="padding:12px; font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">
+        €${(inv.vatAmount || 27.09).toFixed(2)}
+      </td>
+      <td style="padding:12px; font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--green);">
+        €${(inv.total || 156.09).toFixed(2)}
+      </td>
+      <td style="padding:12px;">
+        <span class="sub-badge active">● ${inv.status ? inv.status.toUpperCase() : 'PAGADA'}</span>
+      </td>
+      <td style="padding:12px; text-align:right;">
+        <button class="btn-xs" onclick="openInvoiceModal('${inv.id}')" style="font-size:11px;">
+          📄 Ver Factura
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Load Subscription Data explicitly
+async function loadSubscriptionData() {
+  try {
+    const res = await fetch('/api/subscription/me', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.subscription) {
+      currentUser.subscription = data.subscription;
+      currentUser.invoices = data.invoices || [];
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, data.invoices);
+    }
+  } catch (e) {
+    console.error('Error fetching subscription:', e);
+  }
+}
+
+// Load full dashboard data
+async function loadDashboardData() {
+  try {
+    const res = await fetch('/api/dashboard/data', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+
+    if (res.status === 401) {
+      handleLogout();
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data.subscription) {
+      currentUser.subscription = data.subscription;
+      currentUser.invoices = data.invoices || [];
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, data.invoices);
+    }
+
+    if (data.accessRestricted) {
+      // User is locked out due to expired monthly subscription
+      const paywall = document.getElementById('paywallOverlay');
+      if (paywall) paywall.classList.add('open');
+      return;
+    }
+
+    if (data.metrics) {
+      dashboardMetrics = data.metrics;
+      renderKPIs(data.metrics);
+      renderModules(data.metrics.modules);
+      renderRegionalDelays(data.metrics.regionalDelays);
+      renderSalesHistory(data.metrics.salesHistory);
+      if (data.metrics.salesLast30Days && data.metrics.salesLast30Days.length > 0) {
+        currentD3SalesData = data.metrics.salesLast30Days;
+      }
+      renderD3SalesChart();
+    }
+
+    if (currentUser.role === 'admin') {
+      loadAdminUsers();
+      loadAuditLogs();
+    }
+  } catch (err) {
+    console.error('Error loading dashboard data:', err);
+  }
+}
+
+// Fast 1-Click Monthly Renewal with stored card
+async function quickRenewSubscription() {
+  const btn = document.getElementById('btnQuickRenew');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>Procesando pago de €156.09...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/subscription/renew', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      }
+    });
+    const data = await res.json();
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⚡ Renovar +30 Días (Pago Inmediato)</span>';
+    }
+
+    if (res.ok) {
+      currentUser.subscription = data.subscription;
+      currentUser.invoices = data.invoices || [];
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, data.invoices);
+      document.getElementById('paywallOverlay').classList.remove('open');
+      await loadDashboardData();
+      alert(`¡Suscripción renovada con éxito! Se han añadido 30 días de acceso hasta el ${new Date(data.subscription.currentPeriodEnd).toLocaleDateString('es-ES')}. Factura ${data.invoice.id} disponible.`);
+    } else {
+      alert(data.error || 'Error al renovar suscripción');
+    }
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⚡ Renovar +30 Días (Pago Inmediato)</span>';
+    }
+    alert('Error al conectar con la pasarela de pago.');
+  }
+}
+
+// Execute Renewal directly from Paywall Overlay
+async function executePaywallRenewal() {
+  const btn = document.getElementById('btnPaywallInstant');
+  const alertBox = document.getElementById('paywallAlert');
+  btn.disabled = true;
+  btn.innerHTML = '<span>Procesando cargo seguro con tarjeta...</span>';
+
+  try {
+    const res = await fetch('/api/subscription/renew', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      }
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Renovar Ahora por 30 Días (€156.09 IVA incl.)</span> <span>→</span>';
+
+    if (res.ok) {
+      currentUser.subscription = data.subscription;
+      currentUser.invoices = data.invoices || [];
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, data.invoices);
+      document.getElementById('paywallOverlay').classList.remove('open');
+      await loadDashboardData();
+      alert(`¡Acceso desbloqueado con éxito! Tienes 30 días de acceso garantizado hasta el ${new Date(data.subscription.currentPeriodEnd).toLocaleDateString('es-ES')}.`);
+    } else {
+      alertBox.textContent = data.error || 'Error al procesar el pago.';
+      alertBox.className = 'form-feedback error';
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Renovar Ahora por 30 Días (€156.09 IVA incl.)</span> <span>→</span>';
+    alertBox.textContent = 'Error al conectar con el servidor de cobro.';
+    alertBox.className = 'form-feedback error';
+  }
+}
+
+// Simulate subscription expiration for instant testing
+async function simulateExpirationTest() {
+  if (!confirm('¿Deseas simular que el periodo de 30 días ha concluido? El panel activará la pantalla de bloqueo (paywall) para probar la renovación.')) return;
+
+  try {
+    const res = await fetch('/api/subscription/simulate-expiration', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser.subscription = data.subscription;
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, currentUser.invoices || []);
+      document.getElementById('paywallOverlay').classList.add('open');
+    }
+  } catch (e) {
+    alert('Error al simular expiración');
+  }
+}
+
+// Toggle Auto-renewal setting
+async function toggleAutoRenew() {
+  try {
+    const res = await fetch('/api/subscription/toggle-autorenew', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser.subscription = data.subscription;
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateSubscriptionUI(data.subscription, currentUser.invoices || []);
+      alert(`Auto-renovación mensual ${data.autoRenew ? 'activada' : 'desactivada'}.`);
+    }
+  } catch (e) {
+    alert('Error al cambiar configuración');
+  }
+}
+
+// Open Checkout Modal for a specific plan
+function openCheckoutModal(planKey = 'pro') {
+  const select = document.getElementById('checkoutPlanSelect');
+  if (select) select.value = planKey;
+  updateCheckoutPriceDisplay(planKey);
+
+  document.getElementById('chkCardHolder').value = currentUser.name || 'Gonzalo Rosendo';
+  document.getElementById('chkCardNumber').value = '4242 4242 4242 4242';
+  document.getElementById('chkCardExp').value = '12/28';
+  document.getElementById('chkCardCvv').value = '789';
+  document.getElementById('checkoutAlert').style.display = 'none';
+
+  document.getElementById('checkoutModal').classList.add('open');
+}
+
+function closeCheckoutModal() {
+  document.getElementById('checkoutModal').classList.remove('open');
+}
+
+function updateCheckoutPriceDisplay(planKey) {
+  const prices = { starter: 49, pro: 129, enterprise: 299 };
+  const base = prices[planKey] || 129;
+  const vat = +(base * 0.21).toFixed(2);
+  const total = +(base + vat).toFixed(2);
+
+  document.getElementById('chkBasePrice').textContent = `€${base.toFixed(2)}`;
+  document.getElementById('chkVatAmount').textContent = `€${vat.toFixed(2)}`;
+  document.getElementById('chkTotalPrice').textContent = `€${total.toFixed(2)}`;
+}
+
+// Checkout Form Submission (Process Payment & Upgrade Plan)
+document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertBox = document.getElementById('checkoutAlert');
+  const btn = document.getElementById('btnSubmitCheckout');
+
+  const plan = document.getElementById('checkoutPlanSelect').value;
+  const cardNumber = document.getElementById('chkCardNumber').value;
+  const cardHolder = document.getElementById('chkCardHolder').value;
+  const cardExp = document.getElementById('chkCardExp').value;
+  const cvv = document.getElementById('chkCardCvv').value;
+  const autoRenew = document.getElementById('chkAutoRenew').checked;
+
+  const [expMonth, expYear] = cardExp.split('/');
+
+  btn.disabled = true;
+  document.getElementById('btnCheckoutLabel').textContent = 'Procesando cobro bancario seguro...';
+
+  try {
+    const res = await fetch('/api/subscription/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        plan,
+        cardNumber,
+        cardHolder,
+        expMonth: expMonth || '12',
+        expYear: expYear ? '20' + expYear : '2028',
+        cvv,
+        autoRenew
+      })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    document.getElementById('btnCheckoutLabel').textContent = 'Completar Pago y Ampliar 30 Días';
+
+    if (!res.ok) {
+      alertBox.textContent = data.error || 'Error al procesar el pago';
+      alertBox.className = 'form-feedback error';
+      return;
+    }
+
+    currentUser.subscription = data.subscription;
+    currentUser.invoices = data.invoices || [];
+    localStorage.setItem('cma_user', JSON.stringify(currentUser));
+    updateSubscriptionUI(data.subscription, data.invoices);
+    closeCheckoutModal();
+    document.getElementById('paywallOverlay').classList.remove('open');
+    await loadDashboardData();
+
+    alert(`¡Pago completado con éxito! Tu suscripción ${data.subscription.planName} está activa por 30 días.`);
+  } catch (err) {
+    btn.disabled = false;
+    document.getElementById('btnCheckoutLabel').textContent = 'Completar Pago y Ampliar 30 Días';
+    alertBox.textContent = 'Error de conexión con la pasarela.';
+    alertBox.className = 'form-feedback error';
+  }
+});
+
+// View Printable Official Invoice
+async function openInvoiceModal(invoiceId) {
+  try {
+    const res = await fetch(`/api/subscription/invoice/${invoiceId}`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) {
+      alert('Factura no encontrada');
+      return;
+    }
+    const data = await res.json();
+    const inv = data.invoice;
+
+    document.getElementById('invHeaderId').textContent = inv.id;
+    document.getElementById('invDocNumber').textContent = inv.id;
+    document.getElementById('invDocDate').textContent = new Date(inv.date).toLocaleDateString('es-ES');
+    document.getElementById('invClientCompany').textContent = inv.customerCompany || currentUser.company || 'Distribuciones Ibéricas S.L.';
+    document.getElementById('invClientName').textContent = inv.customerName || currentUser.name;
+    document.getElementById('invClientEmail').textContent = inv.customerEmail || currentUser.email;
+    document.getElementById('invDocPaymentMethod').textContent = inv.paymentMethod || 'Tarjeta Visa •••• 4242';
+
+    document.getElementById('invLinePlan').textContent = inv.plan || 'Plan Business / Pro Mensual';
+    document.getElementById('invLineBase').textContent = `€${(inv.subtotal || 129).toFixed(2)}`;
+    document.getElementById('invLineTotal').textContent = `€${(inv.subtotal || 129).toFixed(2)}`;
+    document.getElementById('invSubtotalBox').textContent = `€${(inv.subtotal || 129).toFixed(2)}`;
+    document.getElementById('invVatBox').textContent = `€${(inv.vatAmount || 27.09).toFixed(2)}`;
+    document.getElementById('invTotalBox').textContent = `€${(inv.total || 156.09).toFixed(2)}`;
+
+    document.getElementById('invoiceModal').classList.add('open');
+  } catch (e) {
+    alert('Error al cargar factura');
+  }
+}
+
+function closeInvoiceModal() {
+  document.getElementById('invoiceModal').classList.remove('open');
+}
+
+function printInvoiceDocument() {
+  window.print();
+}
+
+// Admin Subscription Adjustment Modal
+function openAdminSubModal(userId, userName, currentPlan, currentStatus) {
+  document.getElementById('adminSubUserId').value = userId;
+  document.getElementById('adminSubUserName').value = userName;
+  document.getElementById('adminSubPlan').value = currentPlan || 'pro';
+  document.getElementById('adminSubStatus').value = currentStatus || 'active';
+  document.getElementById('adminSubAddDays').value = '30';
+  document.getElementById('adminSubAlert').style.display = 'none';
+
+  document.getElementById('adminSubModal').classList.add('open');
+}
+
+function closeAdminSubModal() {
+  document.getElementById('adminSubModal').classList.remove('open');
+}
+
+document.getElementById('adminSubForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const userId = document.getElementById('adminSubUserId').value;
+  const plan = document.getElementById('adminSubPlan').value;
+  const status = document.getElementById('adminSubStatus').value;
+  const addDays = document.getElementById('adminSubAddDays').value;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/subscription`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ plan, status, addDays })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      closeAdminSubModal();
+      loadAdminUsers();
+      loadAuditLogs();
+      alert('Suscripción de usuario actualizada correctamente.');
+    } else {
+      document.getElementById('adminSubAlert').textContent = data.error || 'Error al actualizar';
+      document.getElementById('adminSubAlert').className = 'form-feedback error';
+    }
+  } catch (err) {
+    alert('Error de conexión');
+  }
+});
+
+// Quick 1-Click +30 Days extension by Admin
+async function addAdminQuickDays(userId, days = 30) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/subscription`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ addDays: days, status: 'active' })
+    });
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+      alert(`Se han añadido +${days} días de acceso al usuario.`);
+    }
+  } catch (e) {
+    alert('Error al añadir días');
+  }
+}
+
+// Render KPIs
+function renderKPIs(metrics) {
+  const k = metrics.kpis;
+  document.getElementById('kpiVentasVal').textContent = '€' + k.ventasTotales.toLocaleString();
+  document.getElementById('kpiVentasDelta').textContent = (k.ventasDelta > 0 ? '+' : '') + k.ventasDelta + '% ▲';
+  document.getElementById('kpiBeneficioVal').textContent = '€' + k.beneficioNeto.toLocaleString();
+  document.getElementById('kpiBeneficioDelta').textContent = '+' + k.beneficioDelta + '% ▲';
+  document.getElementById('kpiPedidosVal').textContent = k.pedidosTotales.toLocaleString();
+  document.getElementById('kpiTicketVal').textContent = '€' + k.ticketMedio;
+  document.getElementById('kpiServicioVal').textContent = k.nivelServicio + '%';
+  document.getElementById('kpiRetrasosVal').textContent = k.retrasosLogistica + '%';
+  document.getElementById('kpiNpsVal').textContent = k.satisfaccionNps + '%';
+  document.getElementById('kpiCo2Val').textContent = k.huellaCarbono + ' tCO2';
+}
+
+// Render Modules Switch Grid
+function renderModules(modules) {
+  const container = document.getElementById('modulesContainer');
+  container.innerHTML = '';
+
+  Object.entries(modules).forEach(([key, mod]) => {
+    const card = document.createElement('div');
+    card.className = 'module-toggle-card';
+    card.innerHTML = `
+      <div class="module-card-header">
+        <div>
+          <h3>${mod.name}</h3>
+          <span style="font-size:11px; color:var(--text-dim);">${mod.desc}</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" ${mod.active ? 'checked' : ''} onchange="toggleModule('${key}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-family:var(--font-mono); font-size:11px;">
+        <span style="color:${mod.active ? 'var(--green)' : 'var(--text-faint)'};">${mod.active ? '● Activo en Panel' : '○ Desactivado'}</span>
+        <span class="role-badge-tag ${mod.active ? 'user' : ''}">${key.toUpperCase()}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// Toggle Module API
+async function toggleModule(moduleKey, active) {
+  try {
+    const res = await fetch('/api/dashboard/toggle-module', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ moduleKey, active })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadDashboardData();
+    }
+  } catch (e) {
+    console.error('Error toggling module:', e);
+  }
+}
+
+// Render Sales History Bars
+function renderSalesHistory(history) {
+  const container = document.getElementById('salesChartBars');
+  container.innerHTML = '';
+  const maxVal = Math.max(...history.map(h => h.sales), 300000);
+
+  history.forEach(item => {
+    const pct = Math.round((item.sales / maxVal) * 100);
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono); margin-bottom:2px;">
+        <span><strong>${item.month}</strong> (Objetivo: €${(item.target/1000).toFixed(0)}k)</span>
+        <span style="color:var(--green); font-weight:600;">€${item.sales.toLocaleString()}</span>
+      </div>
+      <div class="delay-bar-container"><div class="delay-bar-fill" style="width:${pct}%;"></div></div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// Render Regional Delays
+function renderRegionalDelays(delays) {
+  const container = document.getElementById('regionalDelaysList');
+  container.innerHTML = '';
+
+  delays.forEach(reg => {
+    const isHigh = reg.delay > 2.0;
+    const isMedium = reg.delay > 1.5;
+    const fillClass = isHigh ? 'danger' : isMedium ? 'warning' : '';
+
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:12px;">
+        <span><strong>Delegación ${reg.region}</strong> (Nivel Servicio: ${reg.serviceLevel}%)</span>
+        <span style="font-family:var(--font-mono); color:${isHigh ? 'var(--red)' : 'var(--green)'};">${reg.delay}% retraso</span>
+      </div>
+      <div class="delay-bar-container">
+        <div class="delay-bar-fill ${fillClass}" style="width:${Math.min(100, reg.delay * 25)}%;"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ===================================================================
+// D3.JS INTERACTIVE 30-DAY SALES EVOLUTION CHART ENGINE
+// ===================================================================
+let currentD3SalesData = [];
+let currentD3Metric = 'sales'; // 'sales' | 'compare' | 'orders' | 'margin'
+let currentD3Days = 30; // 7 | 14 | 30
+let isD3CurveSmooth = true;
+let d3ResizeObserver = null;
+
+// Metric switcher
+function setD3Metric(metric) {
+  currentD3Metric = metric;
+  document.querySelectorAll('#salesD3Card .d3-controls-bar .d3-control-group:first-child .d3-btn-toggle').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const map = {
+    'sales': 'btnMetricSales',
+    'compare': 'btnMetricCompare',
+    'orders': 'btnMetricOrders',
+    'margin': 'btnMetricMargin'
+  };
+  const activeBtn = document.getElementById(map[metric]);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const legendMain = document.getElementById('d3LegendLabelMain');
+  const legendTarget = document.getElementById('d3LegendTargetItem');
+  if (metric === 'sales') {
+    if (legendMain) legendMain.textContent = 'Facturación Real Diaria (€)';
+    if (legendTarget) legendTarget.style.display = 'none';
+  } else if (metric === 'compare') {
+    if (legendMain) legendMain.textContent = 'Facturación Real Diaria (€)';
+    if (legendTarget) legendTarget.style.display = 'flex';
+  } else if (metric === 'orders') {
+    if (legendMain) legendMain.textContent = 'Volumen Diario de Pedidos (Uds)';
+    if (legendTarget) legendTarget.style.display = 'none';
+  } else if (metric === 'margin') {
+    if (legendMain) legendMain.textContent = 'Margen Bruto de Operaciones (%)';
+    if (legendTarget) legendTarget.style.display = 'none';
+  }
+
+  renderD3SalesChart();
+}
+
+// Time range zoom filter
+function setD3TimeRange(days) {
+  currentD3Days = days;
+  document.querySelectorAll('#salesD3Card .d3-controls-bar .d3-control-group:nth-child(2) .d3-btn-toggle').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const map = { 7: 'btnRange7', 14: 'btnRange14', 30: 'btnRange30' };
+  const activeBtn = document.getElementById(map[days]);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  renderD3SalesChart();
+}
+
+// Smooth Curve Toggle
+function toggleD3Curve() {
+  isD3CurveSmooth = !isD3CurveSmooth;
+  const label = document.getElementById('btnD3CurveLabel');
+  if (label) {
+    label.textContent = isD3CurveSmooth ? '〰️ Curva Suave' : '📐 Curva Recta';
+  }
+  const btn = document.getElementById('btnD3Curve');
+  if (btn) {
+    btn.classList.toggle('active', isD3CurveSmooth);
+  }
+  renderD3SalesChart();
+}
+
+// Live simulation trigger
+async function refreshD3Simulation() {
+  try {
+    const res = await fetch('/api/dashboard/simulate-sales-day', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      }
+    });
+    const data = await res.json();
+    if (res.ok && data.data) {
+      currentD3SalesData = data.data;
+      renderD3SalesChart();
+      const total = currentD3SalesData.reduce((sum, item) => sum + item.sales, 0);
+      const kpiElem = document.getElementById('kpiVentasVal');
+      if (kpiElem) kpiElem.textContent = '€' + total.toLocaleString();
+    }
+  } catch (e) {
+    console.error('Error refreshing D3 simulation:', e);
+  }
+}
+
+// Export SVG
+function exportD3Svg() {
+  const svgEl = document.querySelector('#d3SalesChartContainer svg');
+  if (!svgEl) {
+    alert('No hay gráfico disponible para exportar.');
+    return;
+  }
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(svgEl);
+  if (!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `evolucion-ventas-30d-${new Date().toISOString().slice(0,10)}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Fallback data generator if API not yet resolved
+function getFallbackD3Data() {
+  const list = [];
+  const now = new Date('2026-08-07T12:00:00Z');
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+    const dayOfWeek = d.getUTCDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const progress = (30 - i) / 30;
+    const baseTarget = 86000 + Math.round(progress * 12000);
+    const dayMultiplier = isWeekend ? 0.82 : (dayOfWeek === 3 || dayOfWeek === 4 ? 1.15 : 1.04);
+    const wave = Math.sin(i * 0.42) * 8500;
+    const noise = (Math.sin(i * 11.3) * 4200) + (Math.cos(i * 5.7) * 3100);
+    const sales = Math.max(55000, Math.round(baseTarget * dayMultiplier + wave + noise));
+    const target = baseTarget;
+    const orders = Math.round(sales / 152);
+    const margin = +(33.4 + Math.sin(i * 0.5) * 2.6 + (progress * 1.4)).toFixed(1);
+    const serviceLevel = +(97.8 + Math.cos(i * 0.3) * 1.4).toFixed(1);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayLabel = `${String(d.getUTCDate()).padStart(2, '0')} ${monthNames[d.getUTCMonth()]}`;
+    list.push({
+      date: dateStr,
+      dayLabel,
+      weekday: dayNames[dayOfWeek],
+      sales,
+      target,
+      orders,
+      margin,
+      serviceLevel
+    });
+  }
+  return list;
+}
+
+// Master D3.js Renderer Function
+function renderD3SalesChart() {
+  const container = document.getElementById('d3SalesChartContainer');
+  if (!container) return;
+
+  if (typeof d3 === 'undefined') {
+    container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-dim); font-family:var(--font-mono);">Cargando motor de visualización D3.js...</div>';
+    setTimeout(renderD3SalesChart, 150);
+    return;
+  }
+
+  // Ensure dataset
+  if (!currentD3SalesData || currentD3SalesData.length === 0) {
+    currentD3SalesData = getFallbackD3Data();
+  }
+
+  // Slice to active time range (7, 14, 30)
+  const slicedRaw = currentD3SalesData.slice(-currentD3Days);
+  const data = slicedRaw.map(d => ({
+    ...d,
+    parsedDate: d.parsedDate instanceof Date ? d.parsedDate : new Date(d.date)
+  }));
+
+  // Update Summary Header Chips
+  const totalPeriodSales = data.reduce((sum, item) => sum + item.sales, 0);
+  const avgPeriodSales = Math.round(totalPeriodSales / data.length);
+  const peakItem = data.reduce((max, item) => item.sales > max.sales ? item : max, data[0]);
+  const daysAboveTarget = data.filter(d => d.sales >= (d.target || 86000)).length;
+  const targetPct = +(daysAboveTarget / data.length * 100).toFixed(1);
+
+  const elTotal = document.getElementById('d3TotalSales');
+  if (elTotal) elTotal.textContent = '€' + totalPeriodSales.toLocaleString('es-ES');
+
+  const elAvg = document.getElementById('d3AvgSales');
+  if (elAvg) elAvg.textContent = '€' + (avgPeriodSales >= 1000 ? (avgPeriodSales/1000).toFixed(1) + 'k' : avgPeriodSales);
+
+  const elPeak = document.getElementById('d3PeakSales');
+  if (elPeak) elPeak.textContent = '€' + (peakItem.sales >= 1000 ? (peakItem.sales/1000).toFixed(1) + 'k' : peakItem.sales);
+
+  const elPeakDate = document.getElementById('d3PeakDate');
+  if (elPeakDate) elPeakDate.textContent = peakItem.dayLabel || peakItem.date;
+
+  const elTargetDays = document.getElementById('d3TargetHitDays');
+  if (elTargetDays) elTargetDays.textContent = `${daysAboveTarget} / ${data.length}`;
+
+  const elTargetPct = document.getElementById('d3TargetHitPct');
+  if (elTargetPct) elTargetPct.textContent = `${targetPct}% éxito`;
+
+  // Measure Dimensions
+  const containerWidth = container.clientWidth || 800;
+  const isMobile = containerWidth < 600;
+  const chartHeight = isMobile ? 300 : Math.max(340, Math.min(420, Math.round(containerWidth * 0.42)));
+  const margin = {
+    top: 24,
+    right: isMobile ? 16 : 32,
+    bottom: 38,
+    left: isMobile ? 48 : 68
+  };
+  const innerWidth = Math.max(100, containerWidth - margin.left - margin.right);
+  const innerHeight = Math.max(100, chartHeight - margin.top - margin.bottom);
+
+  // Clear previous SVG
+  d3.select(container).selectAll('svg').remove();
+
+  // Create SVG Canvas
+  const svg = d3.select(container)
+    .append('svg')
+    .attr('class', 'd3-svg-chart')
+    .attr('viewBox', `0 0 ${containerWidth} ${chartHeight}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Defs & Gradients
+  const defs = svg.append('defs');
+
+  // Area Emerald Gradient
+  const areaGradient = defs.append('linearGradient')
+    .attr('id', 'd3SalesAreaGradient')
+    .attr('x1', '0%').attr('y1', '0%')
+    .attr('x2', '0%').attr('y2', '100%');
+  areaGradient.append('stop').attr('offset', '0%').attr('stop-color', '#3ee08a').attr('stop-opacity', 0.38);
+  areaGradient.append('stop').attr('offset', '60%').attr('stop-color', '#3ee08a').attr('stop-opacity', 0.08);
+  areaGradient.append('stop').attr('offset', '100%').attr('stop-color', '#3ee08a').attr('stop-opacity', 0.0);
+
+  // Secondary Blue Gradient (Orders)
+  const ordersGradient = defs.append('linearGradient')
+    .attr('id', 'd3OrdersAreaGradient')
+    .attr('x1', '0%').attr('y1', '0%')
+    .attr('x2', '0%').attr('y2', '100%');
+  ordersGradient.append('stop').attr('offset', '0%').attr('stop-color', '#5aa7e8').attr('stop-opacity', 0.36);
+  ordersGradient.append('stop').attr('offset', '100%').attr('stop-color', '#5aa7e8').attr('stop-opacity', 0.0);
+
+  // Main Group with Margins
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+  // Scales
+  const xScale = d3.scaleTime()
+    .domain(d3.extent(data, d => d.parsedDate))
+    .range([0, innerWidth]);
+
+  function metricAccessor(d) {
+    if (currentD3Metric === 'orders') return d.orders;
+    if (currentD3Metric === 'margin') return d.margin;
+    return d.sales;
+  }
+
+  let yDomain = [0, 100];
+  if (currentD3Metric === 'orders') {
+    const maxOrders = d3.max(data, d => d.orders) || 800;
+    yDomain = [0, Math.ceil(maxOrders * 1.15)];
+  } else if (currentD3Metric === 'margin') {
+    const minM = Math.max(0, (d3.min(data, d => d.margin) || 30) - 4);
+    const maxM = Math.min(100, (d3.max(data, d => d.margin) || 40) + 4);
+    yDomain = [minM, maxM];
+  } else {
+    const maxS = d3.max(data, d => Math.max(d.sales, d.target || 0)) || 130000;
+    yDomain = [0, Math.ceil(maxS * 1.12)];
+  }
+
+  const yScale = d3.scaleLinear()
+    .domain(yDomain)
+    .range([innerHeight, 0]);
+
+  // Gridlines
+  const yAxisGrid = d3.axisLeft(yScale)
+    .ticks(5)
+    .tickSize(-innerWidth)
+    .tickFormat('');
+
+  g.append('g')
+    .attr('class', 'd3-grid-line')
+    .call(yAxisGrid)
+    .select('.domain').remove();
+
+  // Curve interpolation
+  const curveType = isD3CurveSmooth ? d3.curveMonotoneX : d3.curveLinear;
+
+  // Render Area under the primary curve
+  const areaGen = d3.area()
+    .x(d => xScale(d.parsedDate))
+    .y0(innerHeight)
+    .y1(d => yScale(metricAccessor(d)))
+    .curve(curveType);
+
+  const fillGradientId = currentD3Metric === 'orders' ? 'url(#d3OrdersAreaGradient)' : 'url(#d3SalesAreaGradient)';
+  g.append('path')
+    .datum(data)
+    .attr('class', 'd3-area-sales')
+    .attr('d', areaGen)
+    .style('fill', fillGradientId)
+    .style('opacity', 0)
+    .transition()
+    .duration(650)
+    .style('opacity', 1);
+
+  // Render Target Line (dashed amber) if comparing or sales
+  if (currentD3Metric === 'compare' || currentD3Metric === 'sales') {
+    const targetLineGen = d3.line()
+      .x(d => xScale(d.parsedDate))
+      .y(d => yScale(d.target || 86000))
+      .curve(curveType);
+
+    g.append('path')
+      .datum(data)
+      .attr('class', 'd3-line-target')
+      .attr('d', targetLineGen);
+  }
+
+  // Render Main Primary Line (emerald glow)
+  const lineGen = d3.line()
+    .x(d => xScale(d.parsedDate))
+    .y(d => yScale(metricAccessor(d)))
+    .curve(curveType);
+
+  const strokeColor = currentD3Metric === 'orders' ? '#5aa7e8' : currentD3Metric === 'margin' ? '#a78bfa' : '#3ee08a';
+
+  const path = g.append('path')
+    .datum(data)
+    .attr('class', 'd3-line-sales')
+    .attr('d', lineGen)
+    .style('stroke', strokeColor);
+
+  // Animate path drawing entry transition
+  const totalLength = path.node().getTotalLength();
+  path.attr('stroke-dasharray', totalLength + ' ' + totalLength)
+    .attr('stroke-dashoffset', totalLength)
+    .transition()
+    .duration(850)
+    .ease(d3.easeCubicOut)
+    .attr('stroke-dashoffset', 0);
+
+  // Peak Node Badge Annotation
+  if (data.length > 0) {
+    const peakDataPoint = data.reduce((max, d) => metricAccessor(d) > metricAccessor(max) ? d : max, data[0]);
+    const peakX = xScale(peakDataPoint.parsedDate);
+    const peakY = yScale(metricAccessor(peakDataPoint));
+
+    const peakG = g.append('g')
+      .attr('transform', `translate(${peakX}, ${peakY})`)
+      .style('opacity', 0);
+
+    peakG.append('circle')
+      .attr('class', 'd3-peak-node')
+      .attr('r', 5);
+
+    peakG.append('circle')
+      .attr('r', 11)
+      .attr('fill', 'none')
+      .attr('stroke', strokeColor)
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.5);
+
+    const badgeText = currentD3Metric === 'orders' ? `${peakDataPoint.orders} uds` : currentD3Metric === 'margin' ? `${peakDataPoint.margin}%` : `€${(peakDataPoint.sales/1000).toFixed(1)}k`;
+    const tag = peakG.append('g')
+      .attr('transform', `translate(0, -14)`);
+
+    tag.append('rect')
+      .attr('x', -24)
+      .attr('y', -12)
+      .attr('width', 48)
+      .attr('height', 16)
+      .attr('rx', 4)
+      .attr('fill', '#05120a')
+      .attr('stroke', strokeColor)
+      .attr('stroke-width', 1);
+
+    tag.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.25em')
+      .attr('class', 'd3-peak-badge')
+      .attr('fill', strokeColor)
+      .text(badgeText);
+
+    peakG.transition().delay(650).duration(400).style('opacity', 1);
+  }
+
+  // X Axis
+  const tickCount = isMobile ? Math.min(4, data.length) : Math.min(8, data.length);
+  const xAxis = d3.axisBottom(xScale)
+    .ticks(tickCount)
+    .tickFormat(d3.timeFormat("%d %b"));
+
+  g.append('g')
+    .attr('class', 'd3-axis-line')
+    .attr('transform', `translate(0, ${innerHeight})`)
+    .call(xAxis)
+    .selectAll('text')
+    .attr('class', 'd3-axis-text')
+    .attr('dy', '1.1em');
+
+  // Y Axis
+  const yAxis = d3.axisLeft(yScale)
+    .ticks(5)
+    .tickFormat(d => {
+      if (currentD3Metric === 'orders') return d.toLocaleString();
+      if (currentD3Metric === 'margin') return d + '%';
+      return '€' + (d >= 1000 ? (d/1000).toFixed(0) + 'k' : d);
+    });
+
+  g.append('g')
+    .attr('class', 'd3-axis-line')
+    .call(yAxis)
+    .selectAll('text')
+    .attr('class', 'd3-axis-text');
+
+  // Interactive Crosshair & Tooltip System
+  const focusLine = g.append('line')
+    .attr('class', 'd3-focus-line')
+    .attr('y1', 0)
+    .attr('y2', innerHeight)
+    .style('opacity', 0);
+
+  const focusPoint = g.append('circle')
+    .attr('class', 'd3-focus-point')
+    .attr('r', 5.5)
+    .style('opacity', 0)
+    .style('stroke', strokeColor);
+
+  const focusTargetPoint = g.append('circle')
+    .attr('class', 'd3-focus-target-point')
+    .attr('r', 4.5)
+    .style('opacity', 0);
+
+  const tooltip = d3.select('#d3ChartTooltip');
+
+  // Interactive Hover Overlay
+  g.append('rect')
+    .attr('class', 'd3-overlay-rect')
+    .attr('width', innerWidth)
+    .attr('height', innerHeight)
+    .style('fill', 'none')
+    .style('pointer-events', 'all')
+    .on('pointerenter', () => {
+      focusLine.style('opacity', 1);
+      focusPoint.style('opacity', 1);
+      if (currentD3Metric === 'compare' || currentD3Metric === 'sales') {
+        focusTargetPoint.style('opacity', 1);
+      }
+      tooltip.style('opacity', 1);
+    })
+    .on('pointermove', function(event) {
+      const [xm] = d3.pointer(event);
+      const xDate = xScale.invert(xm);
+      const bisect = d3.bisector(d => d.parsedDate).center;
+      const index = bisect(data, xDate);
+      const d = data[Math.max(0, Math.min(data.length - 1, index))];
+      if (!d) return;
+
+      const px = xScale(d.parsedDate);
+      const py = yScale(metricAccessor(d));
+      const targetPy = yScale(d.target || 86000);
+
+      focusLine.attr('x1', px).attr('x2', px);
+      focusPoint.attr('cx', px).attr('cy', py);
+      focusTargetPoint.attr('cx', px).attr('cy', targetPy);
+
+      // Tooltip content
+      const dateFormatted = d.parsedDate.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      const capitalizedDate = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1);
+      const deltaVsTarget = +(((d.sales - d.target) / d.target) * 100).toFixed(1);
+      const isPositive = deltaVsTarget >= 0;
+
+      tooltip.html(`
+        <div class="d3-tooltip-title">
+          <span>📅 ${d.dayLabel}</span>
+          <span class="d3-tooltip-weekday">${d.weekday || ''}</span>
+        </div>
+        <div style="font-size:10.5px; color:var(--text-dim); margin-bottom:8px;">${capitalizedDate}</div>
+        <div class="d3-tooltip-row">
+          <span>Facturación Real:</span>
+          <strong style="color:var(--green); font-family:var(--font-mono);">€${d.sales.toLocaleString('es-ES')}</strong>
+        </div>
+        <div class="d3-tooltip-row">
+          <span>Objetivo del Día:</span>
+          <span style="color:var(--amber); font-family:var(--font-mono);">€${(d.target || 86000).toLocaleString('es-ES')}</span>
+        </div>
+        <div class="d3-tooltip-row">
+          <span>Delta vs Objetivo:</span>
+          <span class="d3-tooltip-badge ${isPositive ? 'up' : 'down'}">
+            ${isPositive ? '+' : ''}${deltaVsTarget}% ${isPositive ? '▲' : '▼'}
+          </span>
+        </div>
+        <div class="d3-tooltip-row">
+          <span>Pedidos Procesados:</span>
+          <span style="font-family:var(--font-mono);">${d.orders} uds</span>
+        </div>
+        <div class="d3-tooltip-row">
+          <span>Ticket Medio:</span>
+          <span style="font-family:var(--font-mono);">€${(d.sales / d.orders).toFixed(2)}</span>
+        </div>
+        <div class="d3-tooltip-row main">
+          <span>Margen Bruto:</span>
+          <span>${d.margin}%</span>
+        </div>
+      `);
+
+      const tooltipEl = tooltip.node();
+      const tooltipWidth = tooltipEl ? tooltipEl.offsetWidth : 210;
+      const tooltipHeight = tooltipEl ? tooltipEl.offsetHeight : 140;
+
+      let leftPos = px + margin.left + 16;
+      if (leftPos + tooltipWidth > containerWidth - 10) {
+        leftPos = px + margin.left - tooltipWidth - 16;
+      }
+      let topPos = py + margin.top - (tooltipHeight / 2);
+      topPos = Math.max(10, Math.min(chartHeight - tooltipHeight - 10, topPos));
+
+      tooltip
+        .style('left', `${leftPos}px`)
+        .style('top', `${topPos}px`);
+    })
+    .on('pointerleave', () => {
+      focusLine.style('opacity', 0);
+      focusPoint.style('opacity', 0);
+      focusTargetPoint.style('opacity', 0);
+      tooltip.style('opacity', 0);
+    });
+
+  // Attach dynamic ResizeObserver if not already attached
+  if (!d3ResizeObserver && window.ResizeObserver) {
+    d3ResizeObserver = new ResizeObserver(() => {
+      if (container.clientWidth > 50) {
+        renderD3SalesChart();
+      }
+    });
+    d3ResizeObserver.observe(container);
+  }
+}
+
+// Tab switcher
+function showTab(tabId, btn) {
+  document.querySelectorAll('.dash-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.dash-tab-btn').forEach(el => el.classList.remove('active'));
+
+  const target = document.getElementById('tab-' + tabId);
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (tabId === 'kpis') {
+    setTimeout(renderD3SalesChart, 60);
+  }
+
+  if (tabId === 'subscription') {
+    loadSubscriptionData();
+  }
+
+  if (tabId === 'admin-panel' && currentUser.role === 'admin') {
+    loadAdminUsers();
+    loadAuditLogs();
+  }
+}
+
+// Generate Executive AI Report
+async function generateExecutiveReport() {
+  showTab('ai-advisor', document.querySelector('.dash-tabs-bar button:nth-child(3)'));
+  const output = document.getElementById('aiOutputDisplay');
+  const customPrompt = document.getElementById('aiCustomPrompt').value;
+  const btn = document.getElementById('btnGenAI');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Consultando Gemini 3.6 Flash...</span>';
+  output.textContent = 'Analizando KPIs en tiempo real de facturación, logística y plantilla...';
+
+  try {
+    const res = await fetch('/api/dashboard/ai-analysis', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ prompt: customPrompt })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Generar Análisis Ahora</span>';
+
+    if (data.analysis) {
+      output.textContent = data.analysis;
+    } else {
+      output.textContent = 'No se pudo generar el análisis. Comprueba tu conexión.';
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Generar Análisis Ahora</span>';
+    output.textContent = 'Error al comunicarse con el asistente de IA.';
+  }
+}
+
+function setAiPrompt(text) {
+  document.getElementById('aiCustomPrompt').value = text;
+  generateExecutiveReport();
+}
+
+// ===================================================================
+// ADMIN MANAGEMENT (Users, Roles, Subscriptions, Audit Logs)
+// ===================================================================
+async function loadAdminUsers() {
+  try {
+    const res = await fetch('/api/admin/users', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const users = data.users || [];
+
+    // Update stats
+    document.getElementById('statTotalUsers').textContent = users.length;
+    document.getElementById('statActiveUsers').textContent = users.filter(u => u.status === 'activo').length;
+    document.getElementById('statAdminUsers').textContent = users.filter(u => u.role === 'admin').length;
+    document.getElementById('statStandardUsers').textContent = users.filter(u => u.role === 'user').length;
+
+    // Render Table
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+
+    users.forEach(u => {
+      const isMe = u.id === currentUser.id;
+      const sub = u.subscription || { plan: 'pro', status: 'active', daysRemaining: 30 };
+      const subDays = typeof sub.daysRemaining === 'number' ? sub.daysRemaining : 30;
+      const isExp = sub.status === 'expired' || subDays <= 0;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight:600; color:var(--text);">${u.name} ${isMe ? '<span style="font-size:10px; color:var(--green);">(Tú)</span>' : ''}</div>
+          <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">${u.email}</div>
+        </td>
+        <td>
+          <span class="role-badge-tag ${u.role === 'admin' ? 'admin' : 'user'}">
+            ${u.role === 'admin' ? '🛡️ Admin' : '👤 Usuario'}
+          </span>
+        </td>
+        <td>
+          <div style="font-size:12px; font-weight:500;">${(sub.plan || 'pro').toUpperCase()}</div>
+          <div style="font-size:11px; color:${isExp ? 'var(--red)' : 'var(--green)'}; font-family:var(--font-mono);">
+            ${isExp ? 'Expirada (0d)' : `${subDays}d restantes`}
+          </div>
+        </td>
+        <td>
+          <span class="badge-status ${u.status === 'activo' ? 'activo' : 'suspendido'}">
+            ● ${u.status.toUpperCase()}
+          </span>
+        </td>
+        <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-faint);">
+          ${u.lastLogin ? new Date(u.lastLogin).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca'}
+        </td>
+        <td style="text-align:right;">
+          <div class="table-actions" style="justify-content:flex-end; gap:6px;">
+            <button class="btn-xs" onclick="addAdminQuickDays('${u.id}', 30)" title="Ampliar +30 días inmediatamente">⚡ +30d</button>
+            <button class="btn-xs" onclick="openAdminSubModal('${u.id}', '${u.name}', '${sub.plan}', '${sub.status}')" title="Ajustar plan y cuota">⚙️ Plan</button>
+            ${u.role === 'admin' 
+              ? `<button class="btn-xs" onclick="changeUserRole('${u.id}', 'user')" title="Degradar a Usuario estándar">Hacer Usuario</button>`
+              : `<button class="btn-xs" onclick="changeUserRole('${u.id}', 'admin')" title="Promover a Administrador">Hacer Admin</button>`
+            }
+            ${u.status === 'activo'
+              ? `<button class="btn-xs danger" onclick="toggleUserStatus('${u.id}', 'suspendido')">Suspender</button>`
+              : `<button class="btn-xs" onclick="toggleUserStatus('${u.id}', 'activo')">Activar</button>`
+            }
+            ${!isMe ? `<button class="btn-xs danger" onclick="deleteUser('${u.id}', '${u.name}')">Eliminar</button>` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Error loading admin users:', err);
+  }
+}
+
+// Change Role
+async function changeUserRole(userId, newRole) {
+  if (!confirm(`¿Confirmas que deseas cambiar el rol de este usuario a [${newRole.toUpperCase()}]?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al cambiar rol');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Toggle Status (Activo / Suspendido)
+async function toggleUserStatus(userId, newStatus) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al cambiar estado');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Delete user
+async function deleteUser(userId, name) {
+  if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente la cuenta de ${name}?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al eliminar usuario');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Load Audit Logs
+async function loadAuditLogs() {
+  try {
+    const res = await fetch('/api/admin/logs', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const list = document.getElementById('auditLogsList');
+    list.innerHTML = '';
+
+    (data.logs || []).slice(0, 12).forEach(log => {
+      const item = document.createElement('div');
+      item.className = 'audit-log-item';
+      item.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="action-tag">${log.action}</span>
+          <span style="color:var(--text);">${log.detail}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); color:var(--text-dim);">${log.user}</span>
+          <span class="timestamp">${new Date(log.timestamp).toLocaleTimeString('es-ES')}</span>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Error loading logs:', e);
+  }
+}
+
+// Create User Modal
+function openCreateUserModal() {
+  document.getElementById('modalUserForm').reset();
+  document.getElementById('modalAlert').style.display = 'none';
+  document.getElementById('modalCompany').value = currentUser.company || 'Distribuciones Ibéricas S.L.';
+  document.getElementById('modalDepartment').value = 'Operaciones & Ventas';
+  document.getElementById('userModal').classList.add('open');
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.remove('open');
+}
+
+document.getElementById('modalUserForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertBox = document.getElementById('modalAlert');
+  const btn = document.getElementById('btnSaveUserModal');
+
+  const payload = {
+    name: document.getElementById('modalName').value,
+    email: document.getElementById('modalEmail').value,
+    password: document.getElementById('modalPassword').value,
+    role: document.getElementById('modalRole').value,
+    status: document.getElementById('modalStatus').value,
+    company: document.getElementById('modalCompany').value,
+    department: document.getElementById('modalDepartment').value
+  };
+
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+
+    if (!res.ok) {
+      alertBox.textContent = data.error || 'Error al crear usuario';
+      alertBox.className = 'form-feedback error';
+      return;
+    }
+
+    closeUserModal();
+    loadAdminUsers();
+    loadAuditLogs();
+    alert(`Usuario ${payload.name} creado correctamente con rol [${payload.role.toUpperCase()}] y 30 días de suscripción.`);
+  } catch (err) {
+    btn.disabled = false;
+    alertBox.textContent = 'Error de conexión con el servidor.';
+    alertBox.className = 'form-feedback error';
+  }
+});
+
+// Profile Form Submit
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertBox = document.getElementById('profileAlert');
+  const btn = document.getElementById('btnSaveProfile');
+
+  const payload = {
+    name: document.getElementById('profName').value,
+    company: document.getElementById('profCompany').value,
+    department: document.getElementById('profDepartment').value,
+    currentPassword: document.getElementById('profCurrentPass').value || undefined,
+    newPassword: document.getElementById('profNewPass').value || undefined
+  };
+
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+
+    if (!res.ok) {
+      alertBox.textContent = data.error || 'Error al guardar perfil';
+      alertBox.className = 'form-feedback error';
+      return;
+    }
+
+    currentUser = { ...currentUser, ...data.user };
+    localStorage.setItem('cma_user', JSON.stringify(currentUser));
+    updateUserInterface(currentUser);
+
+    alertBox.textContent = '¡Perfil actualizado con éxito!';
+    alertBox.className = 'form-feedback success';
+    document.getElementById('profCurrentPass').value = '';
+    document.getElementById('profNewPass').value = '';
+  } catch (err) {
+    btn.disabled = false;
+    alertBox.textContent = 'Error al comunicar con el servidor.';
+    alertBox.className = 'form-feedback error';
+  }
+});
+
+// Excel drag-drop & upload
+function triggerFileSelect() {
+  document.getElementById('excelFileInput').click();
+}
+
+function handleFileSelected(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    document.getElementById('excelFileName').textContent = file.name;
+    document.getElementById('excelSelectedFile').style.display = 'block';
+  }
+}
+
+async function processExcelUpload() {
+  const fileName = document.getElementById('excelFileName').textContent || 'datos_ventas.xlsx';
+  const dept = document.getElementById('excelDeptSelect').value;
+  const feedback = document.getElementById('excelFeedback');
+  const btn = document.getElementById('btnProcessExcel');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Procesando celdas y recalculando KPIs...</span>';
+
+  try {
+    const res = await fetch('/api/dashboard/upload-excel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ fileName, department: dept })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<span>Sincronizar y Recalcular Métricas</span> <span>→</span>';
+
+    if (res.ok) {
+      feedback.textContent = data.message;
+      feedback.className = 'form-feedback success';
+      loadDashboardData();
+    } else {
+      feedback.textContent = data.error || 'Error al procesar el archivo.';
+      feedback.className = 'form-feedback error';
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Sincronizar y Recalcular Métricas</span> <span>→</span>';
+    feedback.textContent = 'Error de conexión durante la subida.';
+    feedback.className = 'form-feedback error';
+  }
+}
+
+// Switch between admin and user in live demo
+async function switchUserRoleTest() {
+  if (currentUser.role === 'admin') {
+    // Switch to Laura Morales (user)
+    await loginWithCreds('demo@empresa.com', 'user123');
+  } else {
+    // Switch to Gonzalo Rosendo (admin)
+    await loginWithCreds('admin@centrodemando.ia', 'admin123');
+  }
+}
+
+async function quickLoginAdmin() {
+  await loginWithCreds('admin@centrodemando.ia', 'admin123');
+}
+
+async function loginWithCreds(email, password) {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      currentToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('cma_token', currentToken);
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateUserInterface(currentUser);
+      await loadDashboardData();
+    }
+  } catch (e) {
+    console.error('Auto login error:', e);
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('cma_token');
+  localStorage.removeItem('cma_user');
+  window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>

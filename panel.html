@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Mando IA — Panel de Control Corporativo</title>
+<meta name="description" content="Panel de control corporativo en tiempo real con roles de Administrador y Usuario, gestión de usuarios, auditoría, KPIs, módulos y asistente ejecutivo.">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* Additional inline refinements for rich dashboard interactions */
+.kpi-badge-positive { color: var(--green); font-family: var(--font-mono); font-size: 11px; }
+.kpi-badge-negative { color: var(--red); font-family: var(--font-mono); font-size: 11px; }
+.delay-bar-container { background: rgba(255,255,255,0.05); border-radius: 4px; height: 8px; width: 100%; overflow: hidden; margin-top: 6px; }
+.delay-bar-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width .5s ease; }
+.delay-bar-fill.warning { background: var(--amber); }
+.delay-bar-fill.danger { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- Header Principal -->
+<header class="site">
+  <div class="container nav-row">
+    <a href="index.html" class="brand">
+      <div class="brand-mark">GR</div>
+      <div class="brand-text">Centro de Mando IA<span>PANEL DE CONTROL CORPORATIVO</span></div>
+    </a>
+    <nav class="links">
+      <a href="index.html">Web Pública</a>
+      <a href="caracteristicas.html">Características</a>
+      <a href="precios.html">Precios</a>
+      <a href="panel.html" class="active">Panel en Vivo</a>
+    </nav>
+    <div class="nav-cta">
+      <span id="headerUserGreeting" style="font-family:var(--font-mono); font-size:11px; color:var(--green);"></span>
+      <button onclick="handleLogout()" class="btn btn-ghost" style="padding:6px 12px; font-size:11px;">Cerrar Sesión</button>
+    </div>
+  </div>
+</header>
+
+<main class="dash-page container">
+  <!-- Top Bar con Datos del Usuario y Rol -->
+  <div class="dash-topbar">
+    <div class="dash-user-info">
+      <div class="dash-avatar" id="userAvatar">GR</div>
+      <div class="dash-user-details">
+        <h2 id="userNameDisplay">Cargando usuario...</h2>
+        <div class="dash-user-meta">
+          <span id="userRoleBadge" class="role-badge-tag admin">ADMINISTRADOR</span> ·
+          <span id="userCompanyDisplay">Centro de Mando</span> ·
+          <span id="userDepartmentDisplay">Dirección General</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-top-actions">
+      <button class="btn btn-ghost" onclick="switchUserRoleTest()" title="Alternar temporalmente entre vista Admin y Usuario" style="font-size:11px; padding:8px 12px;">
+        <span id="roleToggleLabel">⚡ Probar como Usuario</span>
+      </button>
+      <button class="btn btn-primary" onclick="generateExecutiveReport()" style="font-size:12px; padding:8px 14px;">
+        <span>🧠 Análisis Ejecutivo IA</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Pestañas de Navegación del Panel -->
+  <div class="dash-tabs-bar">
+    <button class="dash-tab-btn active" onclick="showTab('kpis', this)">
+      <span>📊 Resumen General &amp; KPIs</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('ai-advisor', this)">
+      <span>🧠 Asistente Ejecutivo IA</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('modules', this)">
+      <span>⚙️ Módulos Activos (8)</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('excel', this)">
+      <span>📥 Importador Excel</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('powerbi', this)">
+      <span>📊 Conector Power BI</span>
+    </button>
+    <button class="dash-tab-btn admin-tab" id="adminTabBtn" onclick="showTab('admin-panel', this)">
+      <span>🛡️ Gestión de Usuarios &amp; Roles (Admin)</span>
+    </button>
+    <button class="dash-tab-btn" onclick="showTab('profile', this)">
+      <span>👤 Mi Perfil &amp; Seguridad</span>
+    </button>
+  </div>
+
+  <!-- PESTAÑA 1: RESUMEN GENERAL & KPIS -->
+  <div id="tab-kpis" class="dash-view active">
+    <!-- Grid de KPIs principales -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+      
+      <!-- Ventas Totales -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Ventas Totales</span>
+          <span class="kpi-badge-positive" id="kpiVentasDelta">+15.3% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiVentasVal">€2,847,654</div>
+        <div style="font-size:11px; color:var(--text-dim);">Facturación neta acumulada en el periodo</div>
+      </div>
+
+      <!-- Margen / Beneficio -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Beneficio Neto</span>
+          <span class="kpi-badge-positive" id="kpiBeneficioDelta">+14.2% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiBeneficioVal">€312,456</div>
+        <div style="font-size:11px; color:var(--text-dim);">Margen neto consolidado (11.0% sobre ventas)</div>
+      </div>
+
+      <!-- Pedidos Totales -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Pedidos Totales</span>
+          <span class="kpi-badge-positive" id="kpiPedidosDelta">+12.5% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiPedidosVal">18,245</div>
+        <div style="font-size:11px; color:var(--text-dim);">Ticket medio por operación: <strong id="kpiTicketVal">€156.08</strong></div>
+      </div>
+
+      <!-- Nivel de Servicio -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Nivel de Servicio</span>
+          <span class="kpi-badge-positive" id="kpiServicioDelta">+1.2% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--green); margin:8px 0 4px;" id="kpiServicioVal">98.4%</div>
+        <div style="font-size:11px; color:var(--text-dim);">Retrasos logísticos globales: <strong id="kpiRetrasosVal" style="color:var(--amber);">1.8%</strong></div>
+      </div>
+
+      <!-- Satisfacción NPS -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Satisfacción NPS</span>
+          <span class="kpi-badge-positive">+3.1% ▲</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--text); margin:8px 0 4px;" id="kpiNpsVal">94.6%</div>
+        <div style="font-size:11px; color:var(--text-dim);">Fidelización de cuentas y recurrencia</div>
+      </div>
+
+      <!-- Sostenibilidad ESG -->
+      <div class="module-toggle-card">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <span class="eyebrow" style="font-size:10px;">Huella CO2 (ESG)</span>
+          <span class="kpi-badge-positive">-8.5% ▼ (Mejora)</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:26px; font-weight:700; color:var(--green); margin:8px 0 4px;" id="kpiCo2Val">24.8 tCO2</div>
+        <div style="font-size:11px; color:var(--text-dim);">Reducción de emisiones y energía</div>
+      </div>
+    </div>
+
+    <!-- Comparativas y Retrasos Regionales -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+      <!-- Histórico de Ventas Semestral -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <h3>Evolución Mensual (Real vs Objetivo)</h3>
+          <span class="role-badge-tag user">Sincronizado</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;" id="salesChartBars">
+          <!-- Dynamically populated bars -->
+        </div>
+      </div>
+
+      <!-- Retrasos por Delegación Regional -->
+      <div class="module-toggle-card">
+        <div class="module-card-header">
+          <h3>Operaciones y Retrasos por Delegación</h3>
+          <span class="role-badge-tag admin">Tiempo Real</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-top:12px;" id="regionalDelaysList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 2: ASISTENTE EJECUTIVO IA -->
+  <div id="tab-ai-advisor" class="dash-view">
+    <div class="ai-insights-box">
+      <div class="ai-insights-header">
+        <div>
+          <span class="eyebrow">Inteligencia de Negocio</span>
+          <h2 style="font-size:20px; margin-top:4px;">Asistente Ejecutivo Adaptativo</h2>
+          <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">
+            Genera informes analíticos según tu perfil (<strong id="aiRoleLabel">Administrador</strong>) usando Gemini 2.5 Flash y métricas en vivo.
+          </p>
+        </div>
+        <button class="btn btn-primary" onclick="generateExecutiveReport()" id="btnGenAI">
+          <span>⚡ Generar Análisis Ahora</span>
+        </button>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <input type="text" id="aiCustomPrompt" class="form-input" placeholder="Pregunta personalizada (ej. '¿Qué delegación necesita refuerzo de stock antes del cierre?')" style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-xs" onclick="setAiPrompt('Analiza el margen de beneficio neto frente a los objetivos anuales')">Margen neto y objetivos</button>
+          <button class="btn-xs" onclick="setAiPrompt('¿Cuál es la causa de los retrasos en la delegación Sur?')">Retrasos delegación Sur</button>
+          <button class="btn-xs" onclick="setAiPrompt('Recomendaciones de reducción de huella de carbono y costes ESG')">Sostenibilidad ESG</button>
+        </div>
+      </div>
+
+      <div id="aiOutputDisplay" class="ai-output-content">
+        Pulsa "Generar Análisis Ahora" para obtener un informe ejecutivo automático basado en los KPIs y tu rol en la organización.
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 3: MÓDULOS ACTIVOS (8) -->
+  <div id="tab-modules" class="dash-view">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-size:20px;">Control de Módulos Empresariales</h2>
+      <p style="color:var(--text-dim); font-size:13px;">Activa o desactiva las áreas funcionales del panel según las necesidades de tu empresa.</p>
+    </div>
+
+    <div class="module-cards-grid" id="modulesContainer">
+      <!-- Dynamically filled with switches -->
+    </div>
+  </div>
+
+  <!-- PESTAÑA 4: IMPORTADOR EXCEL -->
+  <div id="tab-excel" class="dash-view">
+    <div class="module-toggle-card" style="max-width:700px; margin:0 auto;">
+      <div class="auth-header">
+        <span class="role-badge-tag user">Sincronizador Directo</span>
+        <h2 style="font-size:22px; margin:10px 0;">Cargar Hoja de Cálculo Excel (.xlsx, .csv)</h2>
+        <p style="font-size:13px;">Sube tus tablas de ventas, operaciones o stock para recalcular las métricas del Centro de Mando automáticamente.</p>
+      </div>
+
+      <div id="excelDropArea" style="border:2px dashed var(--panel-border-strong); border-radius:10px; padding:36px 20px; text-align:center; background:rgba(255,255,255,0.01); cursor:pointer; margin-bottom:20px;" onclick="triggerFileSelect()">
+        <div style="font-size:36px; margin-bottom:10px;">📊</div>
+        <div style="font-family:var(--font-mono); font-size:14px; color:var(--text); font-weight:600;">Haz clic o arrastra tu archivo Excel aquí</div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">Compatible con libros de trabajo estándar, plantillas de ventas y registros ERP</div>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelected(this)">
+      </div>
+
+      <div id="excelSelectedFile" style="display:none; padding:12px 14px; background:rgba(62,224,138,0.08); border:1px solid rgba(62,224,138,0.3); border-radius:8px; margin-bottom:18px; font-family:var(--font-mono); font-size:12px; color:var(--green);">
+        Archivo seleccionado: <span id="excelFileName">datos_ventas_2026.xlsx</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div class="form-group">
+          <label>Delegación Destino</label>
+          <select id="excelDeptSelect" class="form-select">
+            <option value="Todas">Todas las Delegaciones</option>
+            <option value="Norte">Delegación Norte</option>
+            <option value="Centro">Delegación Centro</option>
+            <option value="Este">Delegación Este</option>
+            <option value="Sur">Delegación Sur</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Modo de Sincronización</label>
+          <select class="form-select" id="excelModeSelect">
+            <option value="recalculate">Recálculo instantáneo con IA</option>
+            <option value="append">Anexar a datos históricos</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="processExcelUpload()" id="btnProcessExcel">
+        <span>Sincronizar y Recalcular Métricas</span>
+        <span>→</span>
+      </button>
+
+      <div id="excelFeedback" class="form-feedback" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 5: POWER BI EMBEBIDO -->
+  <div id="tab-powerbi" class="dash-view">
+    <div class="module-toggle-card">
+      <div class="module-card-header">
+        <div>
+          <h3>Informe Embebido Power BI / DAX Analytics</h3>
+          <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Visualización conectada con el servicio publicado en la nube.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-xs" onclick="alert('Dataset sincronizado con la nube de Power BI')">🔄 Refrescar Dataset</button>
+          <span class="role-badge-tag admin">En Vivo</span>
+        </div>
+      </div>
+
+      <!-- Simulación interactiva de cuadro Power BI con gráficos vectoriales -->
+      <div style="background:#060a0e; border:1px solid var(--panel-border); border-radius:8px; padding:20px; margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+          <div style="font-family:var(--font-mono); font-size:12px; color:var(--green);">POWER BI SERVICE · DATASET ID: #PBI-992-ES</div>
+          <div style="display:flex; gap:6px;">
+            <select class="form-select" style="padding:4px 8px; font-size:11px;" onchange="updatePbiFilter(this.value)">
+              <option value="all">Todas las Regiones</option>
+              <option value="norte">Región Norte (€890K)</option>
+              <option value="centro">Región Centro (€1.12M)</option>
+              <option value="este">Región Este (€435K)</option>
+              <option value="sur">Región Sur (€402K)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:6px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase;">Facturación por Canal</div>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>B2B / Corporativo</span>
+                  <span>68% (€1.93M)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:68%;"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>Canal Digital / Web</span>
+                  <span>22% (€626K)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:22%; background:var(--blue);"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>Distribuidores</span>
+                  <span>10% (€284K)</span>
+                </div>
+                <div class="delay-bar-container"><div class="delay-bar-fill" style="width:10%; background:var(--amber);"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:6px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase;">Métricas de Clima y NPS</div>
+            <div style="margin-top:14px; text-align:center;">
+              <div style="font-family:var(--font-mono); font-size:32px; font-weight:700; color:var(--green);">+74 NPS</div>
+              <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Nivel Excelente en el sector de distribución</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 6: GESTIÓN DE USUARIOS Y ROLES (ADMINISTRADOR) -->
+  <div id="tab-admin-panel" class="dash-view">
+    <!-- Restricción visual si es rol usuario -->
+    <div id="adminRestrictedWarning" style="display:none; padding:24px; background:rgba(232,193,90,0.1); border:1px solid var(--amber); border-radius:10px; margin-bottom:20px; text-align:center;">
+      <div style="font-size:24px; margin-bottom:6px;">🛡️</div>
+      <h3 style="color:var(--amber); margin-bottom:4px;">Sección Exclusiva para Administradores</h3>
+      <p style="font-size:13px; color:var(--text-dim);">Tu rol actual es <strong>Usuario / Operativo</strong>. Como usuario estándar solo puedes ver y modificar tus métricas asignadas. Para administrar roles y crear usuarios, accede con credenciales de Administrador.</p>
+      <button class="btn btn-primary" onclick="quickLoginAdmin()" style="margin-top:12px; font-size:11px;">Entrar como Admin (admin@centrodemando.ia)</button>
+    </div>
+
+    <div id="adminContentContainer">
+      <!-- Estadísticas de la organización -->
+      <div class="user-stat-grid">
+        <div class="user-stat-card">
+          <div class="lbl">Total Usuarios</div>
+          <div class="val" id="statTotalUsers">3</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Usuarios Activos</div>
+          <div class="val" style="color:var(--green);" id="statActiveUsers">3</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Administradores</div>
+          <div class="val" style="color:var(--amber);" id="statAdminUsers">1</div>
+        </div>
+        <div class="user-stat-card">
+          <div class="lbl">Usuarios Estándar</div>
+          <div class="val" id="statStandardUsers">2</div>
+        </div>
+      </div>
+
+      <!-- Barra de herramientas de administración -->
+      <div class="admin-toolbar">
+        <div>
+          <h2 style="font-size:18px;">Directorio de Usuarios y Roles</h2>
+          <p style="font-size:12px; color:var(--text-dim);">Gestiona permisos, asigna roles de Administrador/Usuario y audita accesos.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateUserModal()" style="font-size:12px; padding:8px 16px;">
+          <span>+ Crear Nuevo Usuario</span>
+        </button>
+      </div>
+
+      <!-- Tabla de Usuarios -->
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Usuario &amp; Email</th>
+              <th>Rol Actual</th>
+              <th>Empresa &amp; Departamento</th>
+              <th>Estado</th>
+              <th>Último Acceso</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Dynamically populated via loadAdminUsers() -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Registro de Auditoría (Audit Logs) en Vivo -->
+      <div style="margin-top:32px;">
+        <div class="module-card-header">
+          <div>
+            <h3 style="font-size:16px;">Registro de Auditoría y Seguridad en Tiempo Real</h3>
+            <p style="font-size:11px; color:var(--text-dim);">Trazabilidad inmutable de inicios de sesión, cambios de roles y modificaciones.</p>
+          </div>
+          <button class="btn-xs" onclick="loadAuditLogs()">🔄 Actualizar Logs</button>
+        </div>
+        <div class="audit-log-list" id="auditLogsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PESTAÑA 7: MI PERFIL & SEGURIDAD -->
+  <div id="tab-profile" class="dash-view">
+    <div class="module-toggle-card" style="max-width:600px; margin:0 auto;">
+      <div class="auth-header">
+        <span class="role-badge-tag user">Mi Cuenta</span>
+        <h2 style="font-size:22px; margin:8px 0;">Configuración de Perfil</h2>
+        <p style="font-size:13px;">Actualiza tus datos de contacto y contraseña de acceso.</p>
+      </div>
+
+      <div id="profileAlert" class="form-feedback"></div>
+
+      <form id="profileForm">
+        <div class="form-group">
+          <label>Nombre Completo</label>
+          <input type="text" id="profName" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label>Correo Electrónico (No modificable)</label>
+          <input type="email" id="profEmail" class="form-input" disabled style="opacity:0.6; cursor:not-allowed;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label>Empresa</label>
+            <input type="text" id="profCompany" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Departamento</label>
+            <input type="text" id="profDepartment" class="form-input">
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--panel-border); margin:20px 0 16px; padding-top:16px;">
+          <div style="font-family:var(--font-mono); font-size:11px; color:var(--green); text-transform:uppercase; margin-bottom:12px;">
+            Cambiar Contraseña (Opcional)
+          </div>
+          <div class="form-group">
+            <label>Contraseña Actual</label>
+            <input type="password" id="profCurrentPass" class="form-input" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label>Nueva Contraseña (mínimo 6 caracteres)</label>
+            <input type="password" id="profNewPass" class="form-input" placeholder="••••••••" minlength="6">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btnSaveProfile">
+          Guardar Cambios de Perfil
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL PARA CREAR / EDITAR USUARIO (ADMIN) -->
+<div id="userModal" class="modal-backdrop">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="font-size:17px; font-family:var(--font-display);" id="userModalTitle">Crear Nuevo Usuario</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+
+    <div id="modalAlert" class="form-feedback"></div>
+
+    <form id="modalUserForm">
+      <div class="form-group">
+        <label>Nombre Completo *</label>
+        <input type="text" id="modalName" class="form-input" required>
+      </div>
+
+      <div class="form-group">
+        <label>Correo Electrónico *</label>
+        <input type="email" id="modalEmail" class="form-input" required>
+      </div>
+
+      <div class="form-group" id="modalPasswordGroup">
+        <label>Contraseña Inicial *</label>
+        <input type="password" id="modalPassword" class="form-input" minlength="6" required>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Rol en el Sistema *</label>
+          <select id="modalRole" class="form-select">
+            <option value="user" selected>👤 Usuario / Operativo</option>
+            <option value="admin">🛡️ Administrador</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Estado de la Cuenta *</label>
+          <select id="modalStatus" class="form-select">
+            <option value="activo" selected>Activo (Permitir acceso)</option>
+            <option value="suspendido">Suspendido (Bloquear)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Empresa</label>
+          <input type="text" id="modalCompany" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Departamento</label>
+          <input type="text" id="modalDepartment" class="form-input">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="btnSaveUserModal" style="margin-top:10px;">
+        Crear Usuario
+      </button>
+    </form>
+  </div>
+</div>
+
+<footer class="site">
+  <div class="container foot-btm">
+    <div class="copy">Centro de Mando IA · Control de Acceso por Roles y Seguridad RGPD · Alojado en la UE</div>
+    <div class="foot-links">
+      <a href="index.html">Web Pública</a>
+      <a href="precios.html">Planes</a>
+      <a href="contacto.html">Soporte</a>
+    </div>
+  </div>
+</footer>
+
+<!-- SCRIPT DEL PANEL DE CONTROL -->
+<script>
+let currentUser = null;
+let currentToken = null;
+let dashboardMetrics = null;
+
+// Initialization
+window.addEventListener('DOMContentLoaded', async () => {
+  currentToken = localStorage.getItem('cma_token');
+  const storedUser = localStorage.getItem('cma_user');
+
+  if (!currentToken || !storedUser) {
+    // Check if we can auto-login as admin demo for smooth preview
+    await quickLoginAdmin();
+    return;
+  }
+
+  try {
+    currentUser = JSON.parse(storedUser);
+    updateUserInterface(currentUser);
+    await loadDashboardData();
+  } catch (e) {
+    await quickLoginAdmin();
+  }
+});
+
+// Update UI with Current User Details
+function updateUserInterface(user) {
+  if (!user) return;
+  currentUser = user;
+
+  document.getElementById('userNameDisplay').textContent = user.name;
+  document.getElementById('userCompanyDisplay').textContent = user.company || 'Empresa';
+  document.getElementById('userDepartmentDisplay').textContent = user.department || 'General';
+  document.getElementById('headerUserGreeting').textContent = `${user.name} (${user.role.toUpperCase()})`;
+
+  const avatar = document.getElementById('userAvatar');
+  const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  avatar.textContent = initials || 'US';
+
+  const roleBadge = document.getElementById('userRoleBadge');
+  const adminTabBtn = document.getElementById('adminTabBtn');
+  const roleToggleLabel = document.getElementById('roleToggleLabel');
+  const aiRoleLabel = document.getElementById('aiRoleLabel');
+
+  if (user.role === 'admin') {
+    roleBadge.textContent = 'ADMINISTRADOR';
+    roleBadge.className = 'role-badge-tag admin';
+    adminTabBtn.style.display = 'flex';
+    document.getElementById('adminRestrictedWarning').style.display = 'none';
+    document.getElementById('adminContentContainer').style.display = 'block';
+    roleToggleLabel.textContent = '⚡ Probar como Usuario';
+    aiRoleLabel.textContent = 'Alta Dirección / Admin';
+  } else {
+    roleBadge.textContent = 'USUARIO OPERATIVO';
+    roleBadge.className = 'role-badge-tag user';
+    document.getElementById('adminRestrictedWarning').style.display = 'block';
+    document.getElementById('adminContentContainer').style.display = 'none';
+    roleToggleLabel.textContent = '⚡ Probar como Admin';
+    aiRoleLabel.textContent = user.department || 'Área Operativa';
+  }
+
+  // Populate profile form
+  document.getElementById('profName').value = user.name;
+  document.getElementById('profEmail').value = user.email;
+  document.getElementById('profCompany').value = user.company || '';
+  document.getElementById('profDepartment').value = user.department || '';
+}
+
+// Load full dashboard data
+async function loadDashboardData() {
+  try {
+    const res = await fetch('/api/dashboard/data', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+
+    if (res.status === 401) {
+      handleLogout();
+      return;
+    }
+
+    const data = await res.json();
+    if (data.metrics) {
+      dashboardMetrics = data.metrics;
+      renderKPIs(data.metrics);
+      renderModules(data.metrics.modules);
+      renderRegionalDelays(data.metrics.regionalDelays);
+      renderSalesHistory(data.metrics.salesHistory);
+    }
+
+    if (currentUser.role === 'admin') {
+      loadAdminUsers();
+      loadAuditLogs();
+    }
+  } catch (err) {
+    console.error('Error loading dashboard data:', err);
+  }
+}
+
+// Render KPIs
+function renderKPIs(metrics) {
+  const k = metrics.kpis;
+  document.getElementById('kpiVentasVal').textContent = '€' + k.ventasTotales.toLocaleString();
+  document.getElementById('kpiVentasDelta').textContent = (k.ventasDelta > 0 ? '+' : '') + k.ventasDelta + '% ▲';
+  document.getElementById('kpiBeneficioVal').textContent = '€' + k.beneficioNeto.toLocaleString();
+  document.getElementById('kpiBeneficioDelta').textContent = '+' + k.beneficioDelta + '% ▲';
+  document.getElementById('kpiPedidosVal').textContent = k.pedidosTotales.toLocaleString();
+  document.getElementById('kpiTicketVal').textContent = '€' + k.ticketMedio;
+  document.getElementById('kpiServicioVal').textContent = k.nivelServicio + '%';
+  document.getElementById('kpiRetrasosVal').textContent = k.retrasosLogistica + '%';
+  document.getElementById('kpiNpsVal').textContent = k.satisfaccionNps + '%';
+  document.getElementById('kpiCo2Val').textContent = k.huellaCarbono + ' tCO2';
+}
+
+// Render Modules Switch Grid
+function renderModules(modules) {
+  const container = document.getElementById('modulesContainer');
+  container.innerHTML = '';
+
+  Object.entries(modules).forEach(([key, mod]) => {
+    const card = document.createElement('div');
+    card.className = 'module-toggle-card';
+    card.innerHTML = `
+      <div class="module-card-header">
+        <div>
+          <h3>${mod.name}</h3>
+          <span style="font-size:11px; color:var(--text-dim);">${mod.desc}</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" ${mod.active ? 'checked' : ''} onchange="toggleModule('${key}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-family:var(--font-mono); font-size:11px;">
+        <span style="color:${mod.active ? 'var(--green)' : 'var(--text-faint)'};">${mod.active ? '● Activo en Panel' : '○ Desactivado'}</span>
+        <span class="role-badge-tag ${mod.active ? 'user' : ''}">${key.toUpperCase()}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// Toggle Module API
+async function toggleModule(moduleKey, active) {
+  try {
+    const res = await fetch('/api/dashboard/toggle-module', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ moduleKey, active })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadDashboardData();
+    }
+  } catch (e) {
+    console.error('Error toggling module:', e);
+  }
+}
+
+// Render Sales History Bars
+function renderSalesHistory(history) {
+  const container = document.getElementById('salesChartBars');
+  container.innerHTML = '';
+  const maxVal = Math.max(...history.map(h => h.sales), 300000);
+
+  history.forEach(item => {
+    const pct = Math.round((item.sales / maxVal) * 100);
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono); margin-bottom:2px;">
+        <span><strong>${item.month}</strong> (Objetivo: €${(item.target/1000).toFixed(0)}k)</span>
+        <span style="color:var(--green); font-weight:600;">€${item.sales.toLocaleString()}</span>
+      </div>
+      <div class="delay-bar-container"><div class="delay-bar-fill" style="width:${pct}%;"></div></div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// Render Regional Delays
+function renderRegionalDelays(delays) {
+  const container = document.getElementById('regionalDelaysList');
+  container.innerHTML = '';
+
+  delays.forEach(reg => {
+    const isHigh = reg.delay > 2.0;
+    const isMedium = reg.delay > 1.5;
+    const fillClass = isHigh ? 'danger' : isMedium ? 'warning' : '';
+
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; font-size:12px;">
+        <span><strong>Delegación ${reg.region}</strong> (Nivel Servicio: ${reg.serviceLevel}%)</span>
+        <span style="font-family:var(--font-mono); color:${isHigh ? 'var(--red)' : 'var(--green)'};">${reg.delay}% retraso</span>
+      </div>
+      <div class="delay-bar-container">
+        <div class="delay-bar-fill ${fillClass}" style="width:${Math.min(100, reg.delay * 25)}%;"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// Tab switcher
+function showTab(tabId, btn) {
+  document.querySelectorAll('.dash-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.dash-tab-btn').forEach(el => el.classList.remove('active'));
+
+  const target = document.getElementById('tab-' + tabId);
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (tabId === 'admin-panel' && currentUser.role === 'admin') {
+    loadAdminUsers();
+    loadAuditLogs();
+  }
+}
+
+// Generate Executive AI Report
+async function generateExecutiveReport() {
+  showTab('ai-advisor', document.querySelector('.dash-tabs-bar button:nth-child(2)'));
+  const output = document.getElementById('aiOutputDisplay');
+  const customPrompt = document.getElementById('aiCustomPrompt').value;
+  const btn = document.getElementById('btnGenAI');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Consultando Gemini 2.5 Flash...</span>';
+  output.textContent = 'Analizando KPIs en tiempo real de facturación, logística y plantilla...';
+
+  try {
+    const res = await fetch('/api/dashboard/ai-analysis', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ prompt: customPrompt })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Generar Análisis Ahora</span>';
+
+    if (data.analysis) {
+      output.textContent = data.analysis;
+    } else {
+      output.textContent = 'No se pudo generar el análisis. Comprueba tu conexión.';
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>⚡ Generar Análisis Ahora</span>';
+    output.textContent = 'Error al comunicarse con el asistente de IA.';
+  }
+}
+
+function setAiPrompt(text) {
+  document.getElementById('aiCustomPrompt').value = text;
+  generateExecutiveReport();
+}
+
+// ===================================================================
+// ADMIN MANAGEMENT (Users, Roles, Audit Logs)
+// ===================================================================
+async function loadAdminUsers() {
+  try {
+    const res = await fetch('/api/admin/users', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const users = data.users || [];
+
+    // Update stats
+    document.getElementById('statTotalUsers').textContent = users.length;
+    document.getElementById('statActiveUsers').textContent = users.filter(u => u.status === 'activo').length;
+    document.getElementById('statAdminUsers').textContent = users.filter(u => u.role === 'admin').length;
+    document.getElementById('statStandardUsers').textContent = users.filter(u => u.role === 'user').length;
+
+    // Render Table
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+
+    users.forEach(u => {
+      const isMe = u.id === currentUser.id;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight:600; color:var(--text);">${u.name} ${isMe ? '<span style="font-size:10px; color:var(--green);">(Tú)</span>' : ''}</div>
+          <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">${u.email}</div>
+        </td>
+        <td>
+          <span class="role-badge-tag ${u.role === 'admin' ? 'admin' : 'user'}">
+            ${u.role === 'admin' ? '🛡️ Admin' : '👤 Usuario'}
+          </span>
+        </td>
+        <td>
+          <div style="font-size:12px;">${u.company}</div>
+          <div style="font-size:11px; color:var(--text-dim);">${u.department}</div>
+        </td>
+        <td>
+          <span class="badge-status ${u.status === 'activo' ? 'activo' : 'suspendido'}">
+            ● ${u.status.toUpperCase()}
+          </span>
+        </td>
+        <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-faint);">
+          ${u.lastLogin ? new Date(u.lastLogin).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca'}
+        </td>
+        <td style="text-align:right;">
+          <div class="table-actions" style="justify-content:flex-end;">
+            ${u.role === 'admin' 
+              ? `<button class="btn-xs" onclick="changeUserRole('${u.id}', 'user')" title="Degradar a Usuario estándar">Hacer Usuario</button>`
+              : `<button class="btn-xs" onclick="changeUserRole('${u.id}', 'admin')" title="Promover a Administrador">Hacer Admin</button>`
+            }
+            ${u.status === 'activo'
+              ? `<button class="btn-xs danger" onclick="toggleUserStatus('${u.id}', 'suspendido')">Suspender</button>`
+              : `<button class="btn-xs" onclick="toggleUserStatus('${u.id}', 'activo')">Activar</button>`
+            }
+            ${!isMe ? `<button class="btn-xs danger" onclick="deleteUser('${u.id}', '${u.name}')">Eliminar</button>` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Error loading admin users:', err);
+  }
+}
+
+// Change Role
+async function changeUserRole(userId, newRole) {
+  if (!confirm(`¿Confirmas que deseas cambiar el rol de este usuario a [${newRole.toUpperCase()}]?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al cambiar rol');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Toggle Status (Activo / Suspendido)
+async function toggleUserStatus(userId, newStatus) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al cambiar estado');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Delete user
+async function deleteUser(userId, name) {
+  if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente la cuenta de ${name}?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      loadAdminUsers();
+      loadAuditLogs();
+    } else {
+      alert(data.error || 'Error al eliminar usuario');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+// Load Audit Logs
+async function loadAuditLogs() {
+  try {
+    const res = await fetch('/api/admin/logs', {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const list = document.getElementById('auditLogsList');
+    list.innerHTML = '';
+
+    (data.logs || []).slice(0, 10).forEach(log => {
+      const item = document.createElement('div');
+      item.className = 'audit-log-item';
+      item.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="action-tag">${log.action}</span>
+          <span style="color:var(--text);">${log.detail}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); color:var(--text-dim);">${log.user}</span>
+          <span class="timestamp">${new Date(log.timestamp).toLocaleTimeString('es-ES')}</span>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Error loading logs:', e);
+  }
+}
+
+// Create User Modal
+function openCreateUserModal() {
+  document.getElementById('modalUserForm').reset();
+  document.getElementById('modalAlert').style.display = 'none';
+  document.getElementById('modalCompany').value = currentUser.company || 'Distribuciones Ibéricas S.L.';
+  document.getElementById('modalDepartment').value = 'Operaciones & Ventas';
+  document.getElementById('userModal').classList.add('open');
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.remove('open');
+}
+
+document.getElementById('modalUserForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertBox = document.getElementById('modalAlert');
+  const btn = document.getElementById('btnSaveUserModal');
+
+  const payload = {
+    name: document.getElementById('modalName').value,
+    email: document.getElementById('modalEmail').value,
+    password: document.getElementById('modalPassword').value,
+    role: document.getElementById('modalRole').value,
+    status: document.getElementById('modalStatus').value,
+    company: document.getElementById('modalCompany').value,
+    department: document.getElementById('modalDepartment').value
+  };
+
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+
+    if (!res.ok) {
+      alertBox.textContent = data.error || 'Error al crear usuario';
+      alertBox.className = 'form-feedback error';
+      return;
+    }
+
+    closeUserModal();
+    loadAdminUsers();
+    loadAuditLogs();
+    alert(`Usuario ${payload.name} creado correctamente con rol [${payload.role.toUpperCase()}]`);
+  } catch (err) {
+    btn.disabled = false;
+    alertBox.textContent = 'Error de conexión con el servidor.';
+    alertBox.className = 'form-feedback error';
+  }
+});
+
+// Profile Form Submit
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const alertBox = document.getElementById('profileAlert');
+  const btn = document.getElementById('btnSaveProfile');
+
+  const payload = {
+    name: document.getElementById('profName').value,
+    company: document.getElementById('profCompany').value,
+    department: document.getElementById('profDepartment').value,
+    currentPassword: document.getElementById('profCurrentPass').value || undefined,
+    newPassword: document.getElementById('profNewPass').value || undefined
+  };
+
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    btn.disabled = false;
+
+    if (!res.ok) {
+      alertBox.textContent = data.error || 'Error al guardar perfil';
+      alertBox.className = 'form-feedback error';
+      return;
+    }
+
+    currentUser = { ...currentUser, ...data.user };
+    localStorage.setItem('cma_user', JSON.stringify(currentUser));
+    updateUserInterface(currentUser);
+
+    alertBox.textContent = '¡Perfil actualizado con éxito!';
+    alertBox.className = 'form-feedback success';
+    document.getElementById('profCurrentPass').value = '';
+    document.getElementById('profNewPass').value = '';
+  } catch (err) {
+    btn.disabled = false;
+    alertBox.textContent = 'Error al comunicar con el servidor.';
+    alertBox.className = 'form-feedback error';
+  }
+});
+
+// Excel drag-drop & upload
+function triggerFileSelect() {
+  document.getElementById('excelFileInput').click();
+}
+
+function handleFileSelected(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    document.getElementById('excelFileName').textContent = file.name;
+    document.getElementById('excelSelectedFile').style.display = 'block';
+  }
+}
+
+async function processExcelUpload() {
+  const fileName = document.getElementById('excelFileName').textContent || 'datos_ventas.xlsx';
+  const dept = document.getElementById('excelDeptSelect').value;
+  const feedback = document.getElementById('excelFeedback');
+  const btn = document.getElementById('btnProcessExcel');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>Procesando celdas y recalculando KPIs...</span>';
+
+  try {
+    const res = await fetch('/api/dashboard/upload-excel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({ fileName, department: dept })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<span>Sincronizar y Recalcular Métricas</span> <span>→</span>';
+
+    if (res.ok) {
+      feedback.textContent = data.message;
+      feedback.className = 'form-feedback success';
+      loadDashboardData();
+    } else {
+      feedback.textContent = data.error || 'Error al procesar el archivo.';
+      feedback.className = 'form-feedback error';
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Sincronizar y Recalcular Métricas</span> <span>→</span>';
+    feedback.textContent = 'Error de conexión durante la subida.';
+    feedback.className = 'form-feedback error';
+  }
+}
+
+// Switch between admin and user in live demo
+async function switchUserRoleTest() {
+  if (currentUser.role === 'admin') {
+    // Switch to Laura Morales (user)
+    await loginWithCreds('demo@empresa.com', 'user123');
+  } else {
+    // Switch to Gonzalo Rosendo (admin)
+    await loginWithCreds('admin@centrodemando.ia', 'admin123');
+  }
+}
+
+async function quickLoginAdmin() {
+  await loginWithCreds('admin@centrodemando.ia', 'admin123');
+}
+
+async function loginWithCreds(email, password) {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      currentToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem('cma_token', currentToken);
+      localStorage.setItem('cma_user', JSON.stringify(currentUser));
+      updateUserInterface(currentUser);
+      await loadDashboardData();
+    }
+  } catch (e) {
+    console.error('Auto login error:', e);
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('cma_token');
+  localStorage.removeItem('cma_user');
+  window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>
